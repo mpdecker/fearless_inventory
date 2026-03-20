@@ -1,0 +1,56 @@
+name: fearless_inventory
+description: A recovery companion app for detailed stepwork and daily inventory.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  hooks_riverpod: ^2.4.9
+  flutter_hooks: ^0.20.4
+
+  # Database (Drift with SQLite/SQLCipher)
+  drift: ^2.14.1
+  sqlite3_flutter_libs: ^0.5.18
+  path_provider: ^2.1.1
+  path: ^1.8.3
+
+  #IO
+  pdf: ^3.10.0
+  printing: ^5.11.0
+  excel: ^4.0.0
+  csv: ^6.0.0
+  share_plus: ^7.1.0
+
+  # Icons & UI
+  cupertino_icons: ^1.0.6
+  intl: ^0.19.0
+
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.2
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation Tools
+  build_runner: ^2.4.8
+  drift_dev: ^2.14.1
+
+  # Linting
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # If you have custom fonts or assets, define them below:
+  # assets:
+  #   - assets/images/
