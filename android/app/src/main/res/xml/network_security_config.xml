@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security configuration for Fearless Inventory.
+
+  Explicitly trusts the system CA store for all HTTPS connections.
+  This is the default behaviour on API 28+ but declaring it explicitly
+  prevents certain emulator/OEM configurations from stripping trust
+  anchors, which causes silent hostname lookup failures on some devices.
+
+  The <base-config> below grants system-CA trust to ALL HTTPS connections,
+  so new intergroup sources are automatically covered. The <domain-config>
+  block below documents the primary domains for reference.
+
+  Meeting data sources:
+    aa-intergroup.org  — OIAA (includeSubdomains covers data.aa-intergroup.org)
+    data.aa-intergroup.org — OML JSON feed        ✅ 8,021 meetings (static JSON)
+    aaboston.org       — Eastern MA Boston CSO     ✅   300 meetings (HTML scrape)
+    westernmassaa.net  — Western Massachusetts     ✅   492 meetings (TSML REST)
+    ct-aa.org          — Connecticut Area 11       ✅ 1,906 meetings (TSML REST)
+    rhodeisland-aa.org — Rhode Island              ✅   720 meetings (TSML REST)
+    aavt.org           — Vermont Area 70           ✅   524 meetings (TSML REST)
+    nhaa.net           — New Hampshire Area 43     🔒 feed restricted
+
+  Other services:
+    nominatim.openstreetmap.org — Geocoding reverse lookup
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust the standard system certificate store for all domains. -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Active meeting data domains (all covered by base-config system CA). -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">aa-intergroup.org</domain>
+        <domain includeSubdomains="true">aaboston.org</domain>
+        <domain includeSubdomains="true">westernmassaa.net</domain>
+        <domain includeSubdomains="true">ct-aa.org</domain>
+        <domain includeSubdomains="true">rhodeisland-aa.org</domain>
+        <domain includeSubdomains="true">aavt.org</domain>
+        <domain includeSubdomains="true">nhaa.net</domain>
+        <domain includeSubdomains="true">openstreetmap.org</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
