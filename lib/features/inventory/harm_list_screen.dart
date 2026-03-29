@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/database/database.dart';
-import '../../data/repositories/inventory_repository.dart';
+import 'providers/inventory_providers.dart';
 import 'harm_entry_screen.dart';
 import '../amends/amends_entry_screen.dart';
-
-// StreamProvider bridges the database repository to the UI
-final harmListStreamProvider = StreamProvider<List<Harm>>((ref) {
-  return ref.watch(inventoryRepositoryProvider).watchHarms();
-});
 
 class HarmListScreen extends ConsumerWidget {
   const HarmListScreen({super.key});

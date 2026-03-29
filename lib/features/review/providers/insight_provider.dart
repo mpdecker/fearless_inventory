@@ -8,15 +8,15 @@ import '../../../core/database/database.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum InsightLevel {
-  encouraging, // positive trend, action to celebrate
-  neutral,     // factual observation, no valence
-  reflective,  // worth sitting with, bring to sponsor
-  attention,   // pattern that may need more work
+  encouraging, // positive trend, achievement to celebrate
+  neutral,     // factual observation, no strong valence
+  reflective,  // worth sitting with; bring to sponsor
+  gentle,      // pattern worth noticing — warm, never shaming
 }
 
 class InsightCard {
   final String title;
-  final String value; // the key number or word displayed large
+  final String value; // the key number or word shown as the metric
   final String interpretation;
   final InsightLevel level;
   final IconData icon;
@@ -53,7 +53,7 @@ final insightsProvider =
     FutureProvider.autoDispose<List<InsightCard>>((ref) async {
   final db = ref.watch(databaseProvider);
 
-  // Fetch all needed data in parallel for speed
+  // Fetch everything in parallel
   final results = await Future.wait([
     db.select(db.resentments).get(),
     db.select(db.fears).get(),
@@ -65,6 +65,8 @@ final insightsProvider =
     db.select(db.amends).get(),
     db.select(db.shortcomingLogs).get(),
     db.select(db.meditationSessions).get(),
+    db.select(db.journalEntries).get(),
+    db.select(db.sponsees).get(),
   ]);
 
   final resentments        = results[0] as List<Resentment>;
@@ -74,6 +76,8 @@ final insightsProvider =
   final amends             = results[4] as List<Amend>;
   final shortcomings       = results[5] as List<ShortcomingLog>;
   final meditationSessions = results[6] as List<MeditationSession>;
+  final journalEntries     = results[7] as List<JournalEntry>;
+  final sponsees           = results[8] as List<Sponsee>;
 
   return _computeInsights(
     resentments:        resentments,
@@ -83,11 +87,13 @@ final insightsProvider =
     amends:             amends,
     shortcomings:       shortcomings,
     meditationSessions: meditationSessions,
+    journalEntries:     journalEntries,
+    sponsees:           sponsees,
   );
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Core computation — pure function, easy to test
+// Core computation — pure function, easy to unit-test
 // ─────────────────────────────────────────────────────────────────────────────
 
 List<InsightCard> _computeInsights({
@@ -98,6 +104,8 @@ List<InsightCard> _computeInsights({
   required List<Amend> amends,
   required List<ShortcomingLog> shortcomings,
   required List<MeditationSession> meditationSessions,
+  required List<JournalEntry> journalEntries,
+  required List<Sponsee> sponsees,
 }) {
   final cards = <InsightCard>[];
 
@@ -114,30 +122,28 @@ List<InsightCard> _computeInsights({
         ..sort((a, b) => b.value.compareTo(a.value));
       final top = sorted.first;
       final label = _affectsLabels[top.key] ?? top.key;
-      final pct =
-          ((top.value / resentments.length) * 100).round();
+      final pct = ((top.value / resentments.length) * 100).round();
 
       cards.add(InsightCard(
         title: 'Most threatened instinct',
         value: label,
         interpretation:
             'Appears in ${top.value} of ${resentments.length} resentments ($pct%). '
-            'This is often where our deepest pain and greatest opportunity for growth live.',
+            'This is often where our deepest pain and our greatest opportunity '
+            'for growth live side by side.',
         level: InsightLevel.reflective,
         icon: Icons.psychology_outlined,
       ));
     }
   }
 
-  // ── 2. Step 10 trend (30-day disturber frequency) ────────────────────────
+  // ── 2. Step 10 trend ─────────────────────────────────────────────────────
   if (reviews.length >= 6) {
-    // Split into two halves; reviews are desc-ordered so first = most recent
     final half = (reviews.length / 2).floor();
     final recent = reviews.take(half).toList();
     final older = reviews.skip(half).take(half).toList();
-
-    double avgRecent = _avgDisturbers(recent);
-    double avgOlder = _avgDisturbers(older);
+    final avgRecent = _avgDisturbers(recent);
+    final avgOlder = _avgDisturbers(older);
 
     final delta = avgOlder > 0
         ? ((avgRecent - avgOlder) / avgOlder * 100).round()
@@ -148,8 +154,8 @@ List<InsightCard> _computeInsights({
         title: 'Step 10 trend',
         value: '${delta.abs()}% less',
         interpretation:
-            'Your disturber frequency has dropped ${delta.abs()}% compared to the previous period. '
-            'Your daily practice is having a real effect.',
+            'Your disturber frequency has dropped ${delta.abs()}% compared to '
+            'the previous period. The daily review is working.',
         level: InsightLevel.encouraging,
         icon: Icons.trending_down_outlined,
       ));
@@ -158,9 +164,9 @@ List<InsightCard> _computeInsights({
         title: 'Step 10 trend',
         value: '+${delta.abs()}% more',
         interpretation:
-            'Disturber frequency is up ${delta.abs()}% lately. '
-            'This might be worth discussing with your sponsor.',
-        level: InsightLevel.attention,
+            'Disturbers are up ${delta.abs()}% lately — life can get busy. '
+            'Worth mentioning to your sponsor, not to analyse, just to share.',
+        level: InsightLevel.gentle,
         icon: Icons.trending_up_outlined,
       ));
     } else {
@@ -176,7 +182,7 @@ List<InsightCard> _computeInsights({
     }
   }
 
-  // ── 3. Step 10 consistency (last 30 days) ────────────────────────────────
+  // ── 3. Step 10 consistency ───────────────────────────────────────────────
   if (reviews.isNotEmpty) {
     final daysCovered = reviews
         .map((r) => r.date.toIso8601String().split('T').first)
@@ -188,15 +194,18 @@ List<InsightCard> _computeInsights({
       title: 'Review consistency',
       value: '$pct%',
       interpretation: pct >= 80
-          ? '$daysCovered of the last 30 days. Strong consistency — this is the foundation everything else builds on.'
+          ? '$daysCovered of the last 30 days. '
+              'Strong consistency — this foundation supports everything else.'
           : pct >= 50
-              ? '$daysCovered of the last 30 days. Good effort. Every review adds up.'
-              : '$daysCovered of the last 30 days. Even a short nightly check-in counts.',
+              ? '$daysCovered of the last 30 days. '
+                  'Good effort. Each review is a renewed choice.'
+              : '$daysCovered of the last 30 days. '
+                  'Even a brief nightly check-in counts — it\'s not about perfection.',
       level: pct >= 80
           ? InsightLevel.encouraging
           : pct >= 50
               ? InsightLevel.neutral
-              : InsightLevel.attention,
+              : InsightLevel.gentle,
       icon: Icons.calendar_today_outlined,
     ));
   }
@@ -204,16 +213,16 @@ List<InsightCard> _computeInsights({
   // ── 4. Amends progress ───────────────────────────────────────────────────
   if (amends.isNotEmpty) {
     final completed = amends.where((a) => a.status == 'completed').length;
-    final pending = amends.where((a) => a.status == 'pending').length;
-    final step8 = amends.where((a) => a.status == 'step8').length;
-    final pct = ((completed / amends.length) * 100).round();
+    final pending   = amends.where((a) => a.status == 'pending').length;
+    final step8     = amends.where((a) => a.status == 'step8').length;
+    final pct       = ((completed / amends.length) * 100).round();
 
     cards.add(InsightCard(
       title: 'Amends progress',
       value: '$completed / ${amends.length}',
       interpretation:
           '$completed complete · $pending planned · $step8 on Step 8 list. '
-          '${pct >= 50 ? "More than half done — keep going." : "Each completed amends is freedom."}',
+          '${pct >= 50 ? "You\'ve come more than halfway — each one matters." : "Every completed amends is a piece of freedom returned."}',
       level: pct >= 75
           ? InsightLevel.encouraging
           : pct >= 25
@@ -223,20 +232,18 @@ List<InsightCard> _computeInsights({
     ));
   }
 
-  // ── 5. Recurring persons in resentments ──────────────────────────────────
+  // ── 5. Recurring person in resentments ───────────────────────────────────
   if (resentments.length >= 2) {
     final personCounts = <String, int>{};
     for (final r in resentments) {
       final name = r.person.trim().toLowerCase();
       personCounts[name] = (personCounts[name] ?? 0) + 1;
     }
-    final recurring =
-        personCounts.entries.where((e) => e.value >= 2).toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+    final recurring = personCounts.entries.where((e) => e.value >= 2).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     if (recurring.isNotEmpty) {
       final top = recurring.first;
-      // Recover display-cased name from original entries
       final displayName = resentments
           .firstWhere((r) => r.person.trim().toLowerCase() == top.key)
           .person
@@ -247,26 +254,26 @@ List<InsightCard> _computeInsights({
         value: displayName,
         interpretation:
             '$displayName appears ${top.value} times. '
-            'Multiple entries toward the same person often reveal '
-            'a deep pattern worth exploring with your sponsor.',
+            'Multiple entries toward the same person often reveal a deep pattern '
+            'that your sponsor can help you see more clearly.',
         level: InsightLevel.reflective,
         icon: Icons.repeat_outlined,
       ));
     }
   }
 
-  // ── 6. Flagged-for-review count ──────────────────────────────────────────
+  // ── 6. Flagged for sponsor ────────────────────────────────────────────────
   final flaggedCount = resentments.where((r) => r.flagForReview).length +
       fears.where((f) => f.flagForReview).length +
       harms.where((h) => h.flagForReview).length;
 
   if (flaggedCount > 0) {
     cards.add(InsightCard(
-      title: 'Items flagged for sponsor',
+      title: 'Ready for sponsor review',
       value: '$flaggedCount',
       interpretation:
           '$flaggedCount item${flaggedCount == 1 ? '' : 's'} flagged across your inventory. '
-          'Export the sponsor review sheet from Settings when you\'re ready.',
+          'Export the sponsor review sheet from Settings whenever you\'re ready.',
       level: InsightLevel.neutral,
       icon: Icons.supervised_user_circle_outlined,
     ));
@@ -275,8 +282,7 @@ List<InsightCard> _computeInsights({
   // ── 7. Most active shortcoming (last 30 days) ────────────────────────────
   if (shortcomings.isNotEmpty) {
     final cutoff = DateTime.now().subtract(const Duration(days: 30));
-    final recent =
-        shortcomings.where((s) => s.dateObserved.isAfter(cutoff)).toList();
+    final recent = shortcomings.where((s) => s.dateObserved.isAfter(cutoff)).toList();
     if (recent.isNotEmpty) {
       final counts = <String, int>{};
       for (final s in recent) {
@@ -287,18 +293,17 @@ List<InsightCard> _computeInsights({
         ..sort((a, b) => b.value.compareTo(a.value));
       final top = sorted.first;
       final displayDesc = recent
-          .firstWhere(
-              (s) => s.description.trim().toLowerCase() == top.key)
+          .firstWhere((s) => s.description.trim().toLowerCase() == top.key)
           .description
           .trim();
 
       cards.add(InsightCard(
-        title: 'Most active shortcoming (30 days)',
+        title: 'Most noticed shortcoming',
         value: '${top.value}×',
         interpretation:
-            '"$displayDesc" logged ${top.value} time${top.value == 1 ? '' : 's'} this month. '
-            'Awareness is the first step — you\'re doing the work.',
-        level: top.value >= 5 ? InsightLevel.attention : InsightLevel.neutral,
+            '"$displayDesc" noticed ${top.value} time${top.value == 1 ? '' : 's'} '
+            'this month. Awareness is the beginning of freedom — you\'re doing the work.',
+        level: top.value >= 5 ? InsightLevel.gentle : InsightLevel.neutral,
         icon: Icons.self_improvement,
       ));
     }
@@ -321,13 +326,14 @@ List<InsightCard> _computeInsights({
       interpretation: pct >= 80
           ? '$daysWithSession of the last 30 days — your inner life is getting real attention.'
           : pct >= 40
-              ? '$daysWithSession of the last 30 days.  Every quiet moment adds up.'
-              : '$daysWithSession of the last 30 days.  Even a few minutes counts as a session.',
+              ? '$daysWithSession of the last 30 days. Every quiet moment is worthwhile.'
+              : '$daysWithSession of the last 30 days. '
+                  'Even a few minutes of stillness is a Step 11 in action.',
       level: pct >= 80
           ? InsightLevel.encouraging
           : pct >= 40
               ? InsightLevel.neutral
-              : InsightLevel.attention,
+              : InsightLevel.gentle,
       icon: Icons.self_improvement,
     ));
   }
@@ -341,7 +347,8 @@ List<InsightCard> _computeInsights({
 
     int sumSeconds(DateTime from, DateTime to) => meditationSessions
         .where((s) =>
-            s.completedAt.isAfter(from) && s.completedAt.isBefore(to) &&
+            !s.completedAt.isBefore(from) &&
+            s.completedAt.isBefore(to) &&
             s.durationSeconds > 0)
         .fold(0, (acc, s) => acc + s.durationSeconds);
 
@@ -356,15 +363,15 @@ List<InsightCard> _computeInsights({
           : 0;
 
       cards.add(InsightCard(
-        title: 'Meditation time this week',
+        title: 'Meditation this week',
         value: '${thisWeekMin}m',
         interpretation: lastWeekMin == 0
-            ? '${thisWeekMin} min so far this week.  Timer use builds a measurable practice.'
+            ? '$thisWeekMin min this week. Using the timer builds a measurable practice.'
             : thisWeekMin >= lastWeekMin
-                ? '${thisWeekMin} min this week vs ${lastWeekMin} min last week '
-                    '(+${delta.abs()}%).  Growing consistency.'
-                : '${thisWeekMin} min this week vs ${lastWeekMin} min last week '
-                    '(${delta}%).  The quiet moments are always there when you need them.',
+                ? '$thisWeekMin min this week vs $lastWeekMin min last week '
+                    '(+${delta.abs()}%). Growing quiet time.'
+                : '$thisWeekMin min this week vs $lastWeekMin min last week. '
+                    'The stillness is always there when you come back to it.',
         level: thisWeekMin >= lastWeekMin
             ? InsightLevel.encouraging
             : InsightLevel.neutral,
@@ -373,14 +380,91 @@ List<InsightCard> _computeInsights({
     }
   }
 
-  // ── 10. Empty state — nothing to show yet ────────────────────────────────
+  // ── 10. Journal breadth ───────────────────────────────────────────────────
+  if (journalEntries.isNotEmpty) {
+    final stepSet = journalEntries
+        .where((e) => e.stepNumber != null)
+        .map((e) => e.stepNumber!)
+        .toSet();
+    final covered = stepSet.length;
+
+    if (covered >= 1) {
+      cards.add(InsightCard(
+        title: 'Steps reflected on',
+        value: '$covered / 12',
+        interpretation: covered >= 8
+            ? 'You\'ve written across $covered of the 12 steps. '
+                'Wide reflection is a mark of thoroughness.'
+            : covered >= 4
+                ? 'You\'ve written about $covered steps so far. '
+                    'The journal grows step by step.'
+                : 'You\'ve started reflecting on $covered step${covered == 1 ? '' : 's'}. '
+                    'Every entry is a moment of honesty with yourself.',
+        level: covered >= 8
+            ? InsightLevel.encouraging
+            : covered >= 4
+                ? InsightLevel.neutral
+                : InsightLevel.reflective,
+        icon: Icons.menu_book_outlined,
+      ));
+    }
+  }
+
+  // ── 11. Sponsee progress (if sponsoring others) ───────────────────────────
+  final activeSponsees = sponsees.where((s) => s.isActive).toList();
+  if (activeSponsees.isNotEmpty) {
+    final avg = activeSponsees
+            .map((s) => (s.currentStep ?? 1).toDouble())
+            .reduce((a, b) => a + b) /
+        activeSponsees.length;
+    final avgRounded = avg.round();
+
+    cards.add(InsightCard(
+      title: 'Sponsee progress',
+      value: activeSponsees.length == 1
+          ? 'Step $avgRounded'
+          : '${activeSponsees.length} sponsees',
+      interpretation: activeSponsees.length == 1
+          ? 'Your sponsee is working Step $avgRounded. '
+              'The best sponsorship is your own continued recovery.'
+          : '${activeSponsees.length} active sponsees, '
+              'averaging around Step $avgRounded. '
+              'Carrying the message is the heart of Step 12.',
+      level: InsightLevel.encouraging,
+      icon: Icons.diversity_3_outlined,
+    ));
+  }
+
+  // ── 12. Gratitude practice ────────────────────────────────────────────────
+  if (reviews.isNotEmpty) {
+    final withGratitude = reviews.where((r) =>
+        r.gratitude != null && r.gratitude!.trim().isNotEmpty).length;
+    final pct = ((withGratitude / reviews.length) * 100).round();
+
+    if (withGratitude >= 3) {
+      cards.add(InsightCard(
+        title: 'Gratitude in reviews',
+        value: '$pct%',
+        interpretation: pct >= 70
+            ? 'You wrote gratitude in $withGratitude of your last '
+                '${reviews.length} reviews. '
+                'A grateful heart is a protected heart.'
+            : 'You\'ve included gratitude in $withGratitude of your recent reviews. '
+                'Adding even one thing each night builds the habit naturally.',
+        level: pct >= 70 ? InsightLevel.encouraging : InsightLevel.neutral,
+        icon: Icons.favorite_border,
+      ));
+    }
+  }
+
+  // ── 13. Empty state ───────────────────────────────────────────────────────
   if (cards.isEmpty) {
     cards.add(const InsightCard(
-      title: 'No data yet',
+      title: 'Your story is just beginning',
       value: '—',
       interpretation:
-          'Complete some resentment entries, daily reviews, and amends '
-          'to begin seeing patterns here.',
+          'Complete some Step 10 reviews, stepwork entries, and amends '
+          'to start seeing patterns emerge here.',
       level: InsightLevel.neutral,
       icon: Icons.hourglass_empty_outlined,
     ));

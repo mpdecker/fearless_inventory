@@ -12,6 +12,7 @@ import '../settings/settings_screen.dart';
 import '../review/providers/streak_provider.dart';
 import '../../core/providers/sobriety_provider.dart';
 import '../../core/services/sobriety_service.dart';
+import '../../core/services/onboarding_service.dart';
 
 // Stepwork Imports
 import '../stepwork/step_4_landing_screen.dart';
@@ -20,6 +21,9 @@ import '../stepwork/shortcoming_dashboard_screen.dart';
 import '../stepwork/step_11_meditation_screen.dart';
 import '../stepwork/bedtime_meditation_screen.dart';
 import '../stepwork/step12_screen.dart';
+
+// Journal
+import '../journal/screens/journal_tab.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -31,11 +35,32 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
+  /// Tracks which tab intros have been shown this session to prevent
+  /// double-firing if the user taps quickly before the async check completes.
+  final Set<int> _introShownThisSession = {};
+
   // Callback to allow child views to request a tab switch by index.
   void _onTabRequest(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
+  }
+
+  Future<void> _onDestinationSelected(int index) async {
+    setState(() => _selectedIndex = index);
+    // Dashboard (0) never gets an intro; ignore already-shown tabs.
+    if (index == 0 || _introShownThisSession.contains(index)) return;
+    // Guard immediately to prevent double-show on rapid taps.
+    _introShownThisSession.add(index);
+    final alreadyVisited = await OnboardingService.hasVisitedTab(index);
+    if (alreadyVisited || !mounted) return;
+    await OnboardingService.markTabVisited(index);
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TabIntroSheet(tabIndex: index),
+    );
   }
 
   @override
@@ -44,19 +69,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _HomeDashboardView(onTabRequest: _onTabRequest), // 0 — Dashboard
       const MeetingsScreen(),                          // 1 — Meetings
       const Step12Screen(),                            // 2 — Step 12
-      const RecoveryInsightsScreen(),                  // 3 — Insights
+      const JournalTab(),                              // 3 — Journal
+      const RecoveryInsightsScreen(),                  // 4 — Insights
     ];
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Recovery Companion', 
+        title: const Text('Recovery Companion',
           style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.push(
-              context, 
+              context,
               MaterialPageRoute(builder: (_) => const SettingsScreen())
             ),
           )
@@ -68,12 +94,169 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: _onDestinationSelected,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.groups_outlined), label: 'Meetings'),
           NavigationDestination(icon: Icon(Icons.diversity_3_outlined), label: 'Step 12'),
+          NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Journal'),
           NavigationDestination(icon: Icon(Icons.insights_outlined), label: 'Insights'),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab first-visit intro sheets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TabIntroData {
+  final String title;
+  final String body;
+  final IconData icon;
+  final Color color;
+  const _TabIntroData({
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.color,
+  });
+}
+
+const _kTabIntros = <int, _TabIntroData>{
+  // ── 1. Meetings ──────────────────────────────────────────────────────────
+  1: _TabIntroData(
+    title: 'Your Meeting Life',
+    body:
+        'Search AA, NA, and OA meetings near you or anywhere in the world. '
+        'Bookmark your home group, save favorites, and mark meetings for '
+        'planned attendance — they show up on your Step 12 service calendar '
+        'as recurring weekly events so your commitments stay visible.',
+    icon: Icons.groups_outlined,
+    color: Color(0xFF1A56DB),
+  ),
+  // ── 2. Step 12 ────────────────────────────────────────────────────────────
+  2: _TabIntroData(
+    title: 'Service & Fellowship',
+    body:
+        'The joy of living is the theme of the Twelfth Step, and action is '
+        'its key word. Log your 12th Step calls, track service commitments, '
+        'and manage your sponsees here. The calendar keeps your service life '
+        'organized alongside your planned meeting attendance.',
+    icon: Icons.diversity_3_outlined,
+    color: Color(0xFF00695C),
+  ),
+  // ── 3. Journal ────────────────────────────────────────────────────────────
+  3: _TabIntroData(
+    title: 'Your Recovery Journal',
+    body:
+        'Write freely or work through guided prompts anchored to any step or '
+        'tradition. Entries are linked to your step work, searchable by '
+        'subject, and exportable as a formatted PDF — useful for Step 5 '
+        'preparation or sharing reflections with your sponsor.',
+    icon: Icons.menu_book_outlined,
+    color: Color(0xFF4527A0),
+  ),
+  // ── 4. Insights ───────────────────────────────────────────────────────────
+  4: _TabIntroData(
+    title: 'Recovery at a Glance',
+    body:
+        'Honest data for honest reflection. See your Step 10 review streak, '
+        'inventory patterns over time, and your meditation history. Sobriety '
+        'milestones and trend charts help you and your sponsor spot growth — '
+        'and blind spots — across days, months, and years.',
+    icon: Icons.insights_outlined,
+    color: Color(0xFFB45309),
+  ),
+};
+
+class _TabIntroSheet extends StatelessWidget {
+  final int tabIndex;
+  const _TabIntroSheet({required this.tabIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    final intro = _kTabIntros[tabIndex];
+    if (intro == null) return const SizedBox.shrink();
+
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(28, 16, 28, bottomPadding + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Drag handle ──────────────────────────────────────────────────
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── Icon ─────────────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: intro.color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(intro.icon, color: intro.color, size: 32),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Title ─────────────────────────────────────────────────────────
+          Text(
+            intro.title,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade900,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // ── Body ──────────────────────────────────────────────────────────
+          Text(
+            intro.body,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey.shade700,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // ── CTA ───────────────────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: intro.color,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                'Got it',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../data/repositories/review_repository.dart';
 import '../../core/database/database.dart';
-
-// Provider for the history stream
-final reviewsStreamProvider = StreamProvider<List<DailyReview>>((ref) {
-  return ref.watch(reviewRepositoryProvider).watchAllReviews();
-});
+import 'providers/review_providers.dart';
 
 class ReviewHistoryScreen extends ConsumerWidget {
   const ReviewHistoryScreen({super.key});

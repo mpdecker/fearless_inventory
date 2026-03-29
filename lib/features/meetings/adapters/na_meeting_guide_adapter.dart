@@ -8,27 +8,23 @@ import 'meeting_source_adapter.dart';
 
 /// NA Meeting Guide API base URL.
 ///
-/// Narcotics Anonymous World Services provides a Meeting Guide-compatible
-/// (TSML) API endpoint for many regions.  The primary endpoint is:
-///   https://na.org/meetingsearch/
+/// Narcotics Anonymous World Services (NAWS) has not published a stable,
+/// versioned JSON API for third-party use.  The endpoint below was used by
+/// partner apps as recently as 2024 but returns HTTP 404 as of March 2026.
 ///
-/// Additionally, many NA regional websites expose the standard TSML API at
-/// their own domains.  The [NaMeetingGuideAdapter] defaults to the world
-/// services endpoint; regional overrides can be passed via [customBaseUrl].
+/// ⚠️  Until NAWS publishes an updated endpoint, the recommended path for
+///     regional NA meeting data is to pull from the individual NA regional
+///     website's TSML WordPress feed (see [TsmlAdapter]):
 ///
-/// ⚠️  NA World Services requires that applications accessing their meeting
-///     data respect their acceptable-use policy.  The NA app itself uses
-///     meeting data from individual Area and Regional offices; a single
-///     global API key is NOT publicly available.  The endpoint below is
-///     the publicly documented bulk endpoint used by the NA Meeting Guide
-///     app and partner applications.
+///       GET https://<na-region-site>/wp-json/tsml/meetings
+///
+///     Each NERNA sub-region that runs the "12 Step Meeting List" WordPress
+///     plugin exposes meetings at that path.  The [NaMeetingGuideAdapter]
+///     is kept here for when NAWS publishes a replacement endpoint; pass
+///     the new URL via [customBaseUrl] without modifying this file.
 ///
 /// Reference: https://www.na.org/meetingsearch/
 const _kNaBaseUrl = 'https://www.na.org/meetingsearch/searchresults.php';
-
-/// Alternative TSML-format endpoint used by some NA regions.
-/// Some Regional/Area websites expose this path directly.
-const _kNaTsmlPath = '/wp-json/wp/v2/meetings';
 
 const _kPageSize = 500;
 
@@ -99,6 +95,47 @@ class NaMeetingGuideAdapter implements MeetingSourceAdapter {
         client: client,
       );
 
+  // ── NA regional factories (territory-specific) ────────────────────────────
+
+  /// **NERNA** — New England Region of Narcotics Anonymous.
+  ///
+  /// Covers Massachusetts (all areas) and Rhode Island (Greater Providence).
+  /// Primary website: https://nerna.org
+  ///
+  /// Preferred feed path (when NERNA opens their TSML feed):
+  ///   TsmlAdapter(id: 'tsml-na-nerna', baseUrl: 'https://nerna.org', fellowship: 'NA')
+  ///
+  /// This constructor uses the NAWS state-filtered endpoint as a fallback;
+  /// supply [customBaseUrl] to point at a verified NERNA-specific feed.
+  factory NaMeetingGuideAdapter.nerna({
+    String? customBaseUrl,
+    http.Client? client,
+  }) =>
+      NaMeetingGuideAdapter(
+        regionKey: 'nerna',
+        states: kUsRegions['nerna']!,
+        customBaseUrl: customBaseUrl,
+        client: client,
+      );
+
+  /// **NNERNA** — Northern New England Region of Narcotics Anonymous.
+  ///
+  /// Covers New Hampshire, Maine, and Vermont.
+  /// Primary website: https://nnerna.org
+  ///
+  /// Note: nnerna.org does not expose a TSML feed (verified Mar 2026).
+  /// Supply [customBaseUrl] if a regional feed becomes available.
+  factory NaMeetingGuideAdapter.nnerna({
+    String? customBaseUrl,
+    http.Client? client,
+  }) =>
+      NaMeetingGuideAdapter(
+        regionKey: 'nnerna',
+        states: kUsRegions['nnerna']!,
+        customBaseUrl: customBaseUrl,
+        client: client,
+      );
+
   // ── MeetingSourceAdapter ─────────────────────────────────────────────────
 
   @override
@@ -116,6 +153,9 @@ class NaMeetingGuideAdapter implements MeetingSourceAdapter {
       'pacific_northwest': 'NA — Pacific Northwest',
       'california': 'NA — California',
       'national': 'NA — National',
+      // NA regional bodies
+      'nerna':  'NA — New England (NERNA)',
+      'nnerna': 'NA — Northern New England (NNERNA)',
     };
     return labels[regionKey] ?? 'NA — $regionKey';
   }

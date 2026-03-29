@@ -17,6 +17,9 @@ class OnboardingService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   static const _key = 'fearless_onboarding_complete_v1';
+  static const _tabVisitedPrefix = 'fearless_tab_visited_v1_';
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
 
   /// Returns [true] once the user has finished onboarding at least once.
   static Future<bool> hasCompleted() async {
@@ -24,7 +27,7 @@ class OnboardingService {
     return value == 'true';
   }
 
-  /// Call this when the user taps "Get Started" on the final onboarding page.
+  /// Call this when the user taps the final CTA on the last onboarding page.
   static Future<void> markComplete() async {
     await _storage.write(key: _key, value: 'true');
   }
@@ -33,5 +36,23 @@ class OnboardingService {
   /// replay onboarding from Settings.
   static Future<void> reset() async {
     await _storage.delete(key: _key);
+    // Also clear tab-visit flags so first-visit intros replay.
+    for (int i = 1; i <= 4; i++) {
+      await _storage.delete(key: '$_tabVisitedPrefix$i');
+    }
+  }
+
+  // ── Tab first-visit tracking ──────────────────────────────────────────────
+
+  /// Returns [true] if the user has ever navigated to [tabIndex] (1–4).
+  static Future<bool> hasVisitedTab(int tabIndex) async {
+    final value = await _storage.read(key: '$_tabVisitedPrefix$tabIndex');
+    return value == 'true';
+  }
+
+  /// Marks [tabIndex] as visited; subsequent calls to [hasVisitedTab] will
+  /// return [true].
+  static Future<void> markTabVisited(int tabIndex) async {
+    await _storage.write(key: '$_tabVisitedPrefix$tabIndex', value: 'true');
   }
 }

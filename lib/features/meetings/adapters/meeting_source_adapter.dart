@@ -32,6 +32,12 @@ class MeetingDto {
   final String? notes;
   final DateTime? lastUpdated;
 
+  /// BCP-47 language code for the meeting's primary language.
+  /// Common values: 'en' (English), 'es' (Spanish), 'fr' (French).
+  /// Defaults to 'en'. Parsed from the TSML `lang` field when present;
+  /// otherwise inferred from type codes or defaulted to English.
+  final String language;
+
   const MeetingDto({
     required this.externalId,
     required this.name,
@@ -54,6 +60,7 @@ class MeetingDto {
     this.onlinePlatform,
     this.notes,
     this.lastUpdated,
+    this.language = 'en',
   });
 }
 
@@ -95,6 +102,11 @@ const kMeetingTypeCodes = <String, String>{
   'NDG': 'Non-Discrimination',
   'NS': 'No Smoking',
   'PE': 'Pets Welcome',
+  // ── Language-specific meetings ────────────────────────────────────────
+  // These type codes signal a non-English primary language.
+  // When present, the adapter also sets the `language` field on MeetingDto.
+  'FR': 'French (Français)',
+  'ES': 'Spanish (Español)',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +163,13 @@ const kUsRegions = <String, List<String>>{
   'pacific_northwest': ['WA', 'OR'],
   'california': ['CA'],
   'alaska_hawaii': ['AK', 'HI'],
+
+  // ── NA regional boundaries (differ from the AA regions above) ────────────
+  // NERNA  = New England Region of NA  — MA + RI
+  // NNERNA = Northern New England Region of NA — NH, ME, VT
+  // Connecticut NA has its own separate region (not part of NERNA).
+  'nerna':  ['MA', 'RI'],
+  'nnerna': ['NH', 'ME', 'VT'],
 };
 
 /// All US state abbreviations — use sparingly; results in very large fetches.

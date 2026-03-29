@@ -213,6 +213,11 @@ class TsmlAdapter implements MeetingSourceAdapter {
           ?? _str(m['guid'])
           ?? '';
 
+      // ── Language ──────────────────────────────────────────────────────────
+      // Priority: explicit `lang`/`language` field → type-code heuristics → 'en'
+      final langField = _str(m['lang']) ?? _str(m['language']);
+      final language = _inferLanguage(langField, rawTypes);
+
       return MeetingDto(
         externalId: id,
         name: _str(m['name']) ?? _str(m['post_title']) ?? '(Unnamed Meeting)',
@@ -235,6 +240,7 @@ class TsmlAdapter implements MeetingSourceAdapter {
         onlinePlatform: platform,
         notes: _str(m['notes']) ?? _str(m['directions']),
         lastUpdated: updated,
+        language: language,
       );
     } catch (_) {
       return null; // skip malformed rows silently
@@ -242,6 +248,29 @@ class TsmlAdapter implements MeetingSourceAdapter {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Determine the meeting language from the explicit TSML field (if present)
+  /// or from well-known type-code conventions.
+  ///
+  /// Type-code heuristics (common across TSML intergroup installations):
+  ///   'FR'  → French (Français) — safe to infer; used by many QC/CA groups
+  ///   'ES'  → Spanish (Español) — used by some southern US / Latino groups
+  ///
+  /// 'S' alone is intentionally excluded: it means "Speaker" in some regions
+  /// and "Spanish" in others — too ambiguous to infer safely.
+  static String _inferLanguage(String? langField, List<String> types) {
+    if (langField != null) {
+      final l = langField.toLowerCase();
+      if (l.startsWith('fr')) return 'fr';
+      if (l.startsWith('es') || l == 'spanish') return 'es';
+      if (l.startsWith('en') || l == 'english') return 'en';
+      // Pass through other BCP-47 codes as lowercase (e.g. 'pt', 'de', 'zh').
+      return l.split('-').first; // strip region subtag (e.g. 'en-US' → 'en')
+    }
+    if (types.contains('FR')) return 'fr';
+    if (types.contains('ES')) return 'es';
+    return 'en';
+  }
 
   static String? _str(dynamic v) {
     if (v == null) return null;

@@ -142,8 +142,15 @@ class Meetings extends Table {
   TextColumn get notes => text().nullable()();
   BoolColumn get isBookmarked => boolean().withDefault(const Constant(false))();
   BoolColumn get isHomeGroup => boolean().withDefault(const Constant(false))();
+  /// When true, this meeting appears on the Step 12 calendar every week
+  /// on its [weekday].  Added in schema v12.
+  BoolColumn get isPlannedAttendance =>
+      boolean().withDefault(const Constant(false))();
   BoolColumn get isTemporarilyClosed =>
       boolean().withDefault(const Constant(false))();
+  /// BCP-47 language code: 'en', 'es', 'fr', etc.  Default 'en' (English).
+  /// Added in schema v10.
+  TextColumn get language => text().withDefault(const Constant('en'))();
   DateTimeColumn get lastSyncedAt =>
       dateTime().withDefault(currentDateAndTime)();
 
@@ -375,6 +382,85 @@ class Step5Completions extends Table {
 }
 
 // ─────────────────────────────────────────────
+// JOURNAL SCHEMA (v11)
+// ─────────────────────────────────────────────
+
+/// A personal journal entry associated with a specific step (1–12)
+/// or tradition (1–12).  Exactly one of [stepNumber] / [traditionNumber]
+/// should be non-null for categorised entries; both may be null for
+/// a free-form entry written outside a specific step/tradition context.
+///
+/// Bot-readiness: [promptId] is intentionally nullable.  When the AI
+/// recovery-bot feature ships, it will populate this column with a stable
+/// prompt identifier so entries can be traced back to the prompt that
+/// inspired them.  [tags] and [mood] are similarly reserved for future
+/// enrichment without requiring another migration.
+class JournalEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The user's written reflection.  Required — never empty.
+  TextColumn get content => text()();
+
+  /// Optional user-supplied headline for the entry.
+  TextColumn get title => text().nullable()();
+
+  /// Which step (1–12) this entry is associated with.
+  /// Null when the entry is tradition-related or uncategorised.
+  IntColumn get stepNumber => integer().nullable()();
+
+  /// Which tradition (1–12) this entry is associated with.
+  /// Null when the entry is step-related or uncategorised.
+  IntColumn get traditionNumber => integer().nullable()();
+
+  /// Future: stable ID of the contemplative prompt that inspired this entry.
+  /// Populated by the AI recovery-bot feature; null for self-initiated entries.
+  TextColumn get promptId => text().nullable()();
+
+  /// Future: comma-separated user tags, e.g. "gratitude,fear,hope".
+  TextColumn get tags => text().nullable()();
+
+  /// Future: emotional tone at write-time — e.g. "hopeful" | "struggling".
+  TextColumn get mood => text().nullable()();
+
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
+}
+
+// ─────────────────────────────────────────────
+// LITERATURE BOOKMARKS SCHEMA (v12)
+// ─────────────────────────────────────────────
+
+/// A user-saved bookmark within the Big Book or 12 & 12.
+/// The [bookKey] is a stable identifier such as 'bigbook' or 'twelve_twelve'.
+/// The [chapterKey] is a stable chapter identifier such as 'bb_ch5'.
+@DataClassName('LiteratureBookmark')
+class LiteratureBookmarks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 'bigbook' | 'twelve_twelve'
+  TextColumn get bookKey => text()();
+
+  /// Stable chapter identifier, e.g. 'bb_ch5', 'tt_step7'.
+  TextColumn get chapterKey => text()();
+
+  /// Human-readable chapter title, e.g. "How It Works".
+  TextColumn get chapterTitle => text()();
+
+  /// Optional personal note about why this chapter was bookmarked.
+  TextColumn get note => text().nullable()();
+
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {bookKey, chapterKey}
+      ];
+}
+
+// ─────────────────────────────────────────────
 // DATABASE CLASS
 // ─────────────────────────────────────────────
 
@@ -400,12 +486,16 @@ class Step5Completions extends Table {
   Sponsees,
   SponseeStepProgress,
   SponseeCheckIns,
+  // v11 — Journal
+  JournalEntries,
+  // v12 — Literature bookmarks
+  LiteratureBookmarks,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -456,6 +546,19 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(sponseeStepProgress);
             await m.createTable(sponseeCheckIns);
           }
+          // v9 → v10: language field on meetings; default 'en' for existing rows
+          if (from < 10) {
+            await m.addColumn(meetings, meetings.language);
+          }
+          // v10 → v11: Journal entries for step/tradition reflection
+          if (from < 11) {
+            await m.createTable(journalEntries);
+          }
+          // v11 → v12: Planned meeting attendance + literature bookmarks
+          if (from < 12) {
+            await m.addColumn(meetings, meetings.isPlannedAttendance);
+            await m.createTable(literatureBookmarks);
+          }
         },
       );
 
@@ -478,6 +581,8 @@ class AppDatabase extends _$AppDatabase {
         await delete(sponseeCheckIns).go();
         await delete(sponseeStepProgress).go();
         await delete(sponsees).go();
+        await delete(journalEntries).go();
+        await delete(literatureBookmarks).go();
       });
 }
 

@@ -3,17 +3,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/database/database.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
-import '../../data/repositories/review_repository.dart';
 import 'daily_review_screen.dart';
 import 'review_history_screen.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
-
-final _todayReviewsProvider = StreamProvider.autoDispose<List<DailyReview>>(
-  (ref) => ref.watch(reviewRepositoryProvider).watchTodayReviews(),
-);
+import 'providers/review_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hub screen
@@ -26,7 +18,7 @@ class DailyReviewHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final todayAsync = ref.watch(_todayReviewsProvider);
+    final todayAsync = ref.watch(todayReviewsProvider);
 
     return Scaffold(
       appBar: AppBar(

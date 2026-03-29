@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart';
-import 'package:csv/csv.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Model
@@ -28,7 +28,7 @@ class Reflection {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ReflectionService {
-  // Step-10 signal → CSV theme mapping (shared with MeditationRepository)
+  // Step-10 signal → theme mapping (shared with MeditationRepository)
   static const Map<String, List<String>> signalToThemes = {
     'resentful': ['acceptance', 'letting go', 'compassion', 'patience'],
     'afraid':    ['courage', 'trust', 'faith', 'resilience'],
@@ -36,22 +36,21 @@ class ReflectionService {
     'selfish':   ['service', 'community', 'humility', 'growth'],
   };
 
-  /// All 22 themes present in recovery_reflections.csv.
-  ///
+  /// All 22 themes present in recovery_reflections.json.
   /// Using the full set as the default means new users (no Step-10 history)
-  /// get variety across the entire CSV rather than just 5 themes.
+  /// get variety across the entire dataset rather than a narrow subset.
   static const List<String> _defaultThemes = [
-    'acceptance', 'balance',    'community',  'compassion',
-    'courage',    'faith',      'gratitude',  'growth',
-    'honesty',    'hope',       'humility',   'letting go',
-    'mindfulness','patience',   'perseverance','reflection',
-    'resilience', 'responsibility','self-awareness','service',
+    'acceptance', 'balance',        'community',       'compassion',
+    'courage',    'faith',          'gratitude',        'growth',
+    'honesty',    'hope',           'humility',         'letting go',
+    'mindfulness','patience',       'perseverance',     'reflection',
+    'resilience', 'responsibility', 'self-awareness',   'service',
     'trust',      'willingness',
   ];
 
   static const List<String> _bedtimeCalmThemes = [
-    'letting go', 'trust', 'gratitude', 'balance', 'mindfulness',
-    'faith', 'compassion', 'patience', 'acceptance', 'humility',
+    'letting go', 'trust', 'gratitude', 'balance',  'mindfulness',
+    'faith',      'compassion', 'patience', 'acceptance', 'humility',
     'reflection', 'hope',
   ];
 
@@ -59,19 +58,18 @@ class ReflectionService {
 
   /// Weighted, recency-aware selection.
   ///
-  /// [themeWeights]  Maps CSV theme names to relative importance.
-  ///                 Higher values make a theme more likely to be picked.
-  ///                 Typically built from 30-day Step-10 signal frequencies
+  /// [themeWeights]  Maps theme names to relative importance (higher = more
+  ///                 likely). Built from 30-day Step-10 signal frequencies
   ///                 plus a per-session boost for today's active signals.
   ///
   /// [recentKeys]    Maps reflectionKey → most-recent completedAt.
-  ///                 Used to apply a recency penalty:
+  ///                 Recency penalty:
   ///                   < 2 days  → ×0.05
   ///                   < 5 days  → ×0.30
   ///                   < 10 days → ×0.70
-  ///                   ≥ 10 days → ×1.00 (full weight restored)
+  ///                   ≥ 10 days → full weight
   ///
-  /// [extraThemes]   Extra themes added with a base weight of 1.0 each
+  /// [extraThemes]   Additional themes boosted to weight 1.0 each
   ///                 (used for the bedtime calm-theme bias).
   Future<Reflection?> selectWeighted({
     required Map<String, double> themeWeights,
@@ -79,36 +77,32 @@ class ReflectionService {
     List<String> extraThemes = const [],
   }) async {
     final rows = await _loadRows();
+    if (rows.isEmpty) return null;
 
-    // Gather target themes
+    // Build the set of target themes
     final targetThemes = <String>{
       ...themeWeights.keys,
       ...extraThemes,
     };
     if (targetThemes.isEmpty) targetThemes.addAll(_defaultThemes);
 
-    // Stage 1: rows whose theme is in the target set.
+    // Stage 1: theme-filtered candidates
     var candidates =
-        rows.where((r) => targetThemes.contains(r[1].toString())).toList();
+        rows.where((r) => targetThemes.contains(r['theme'])).toList();
 
-    // Stage 2 fallback: if theme-filtering yields nothing (e.g. CSV parsed
-    // differently on this device / Flutter version), use ALL valid rows so
-    // the screen always receives a reflection instead of showing empty state.
-    if (candidates.isEmpty) {
-      candidates = rows.where((r) => r.length >= 4).toList();
-    }
-
-    // Only truly empty if the CSV itself is missing or unparseable.
+    // Stage 2 fallback: if theme-filtering yields nothing, use all rows
+    // so the screen always receives a reflection.
+    if (candidates.isEmpty) candidates = rows;
     if (candidates.isEmpty) return null;
 
     // Build weight list
     final weights = <double>[];
     for (final row in candidates) {
-      final theme = row[1].toString();
-      final quote = row[2].toString();
+      final theme = row['theme'] as String;
+      final quote = row['quote'] as String;
       final key   = quote.length > 80 ? quote.substring(0, 80) : quote;
 
-      // Base: explicit weight, or 1.0 for extraTheme-only themes
+      // Base weight: explicit weight from Step-10 history, or 1.0
       double w = themeWeights[theme] ?? 1.0;
 
       // Recency penalty
@@ -121,16 +115,15 @@ class ReflectionService {
         } else if (ageDays < 10) {
           w *= 0.70;
         }
-        // ≥ 10 days: full weight, no penalty
+        // ≥ 10 days: full weight restored
       }
 
       weights.add(w.clamp(0, double.infinity));
     }
 
-    // Weighted random pick via cumulative distribution
+    // Weighted random pick
     final total = weights.fold<double>(0, (a, b) => a + b);
     if (total <= 0) {
-      // All weights zeroed — fallback to uniform random
       return _toReflection(candidates[Random().nextInt(candidates.length)]);
     }
 
@@ -140,11 +133,10 @@ class ReflectionService {
       cumulative += weights[i];
       if (dart <= cumulative) return _toReflection(candidates[i]);
     }
-    return _toReflection(candidates.last); // floating-point edge
+    return _toReflection(candidates.last); // floating-point edge case
   }
 
   /// Convenience: morning meditation seeded from raw signal names.
-  /// Delegates to [selectWeighted] with a flat weight of 1.0 per signal theme.
   Future<Reflection?> getReflectionForSignals(
     List<String> activeSignals, {
     Map<String, DateTime> recentKeys = const {},
@@ -167,23 +159,26 @@ class ReflectionService {
 
   // ── Internal helpers ────────────────────────────────────────────────────────
 
-  Future<List<List<dynamic>>> _loadRows() async {
-    final raw =
-        await rootBundle.loadString('assets/data/recovery_reflections.csv');
-    final all = const CsvToListConverter().convert(raw);
-    // Use sublist instead of removeAt so we never mutate a potentially
-    // fixed-length list (csv 6.x may return non-growable collections).
-    // Filter out the header row (index 0) and any incomplete rows — the CSV
-    // file ends with a trailing newline which the parser returns as a
-    // zero-length or single-field row; those would throw RangeError on r[1].
-    if (all.length <= 1) return const [];
-    return all.sublist(1).where((r) => r.length >= 4).toList();
+  /// Loads the reflections JSON asset and returns it as a list of maps.
+  /// Each map has keys: 'theme', 'quote', 'reflection'.
+  Future<List<Map<String, dynamic>>> _loadRows() async {
+    final raw = await rootBundle
+        .loadString('assets/data/recovery_reflections.json');
+    final decoded = json.decode(raw);
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .where((r) =>
+            r['theme'] is String &&
+            r['quote'] is String &&
+            r['reflection'] is String)
+        .toList();
   }
 
-  Reflection _toReflection(List<dynamic> row) => Reflection(
-        theme:      row[1].toString(),
-        quote:      row[2].toString(),
-        reflection: row[3].toString(),
+  Reflection _toReflection(Map<String, dynamic> row) => Reflection(
+        theme:      row['theme']      as String,
+        quote:      row['quote']      as String,
+        reflection: row['reflection'] as String,
       );
 
   static Map<String, double> _signalsToWeights(List<String> signals) {

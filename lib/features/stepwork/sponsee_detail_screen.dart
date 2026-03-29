@@ -12,41 +12,7 @@ import '../../data/repositories/service_commitments_repository.dart';
 import '../../data/repositories/step12_repository.dart';
 import '../../data/services/export_service.dart';
 import 'step12_screen.dart' show AddSponseeSheet, AddStepCallSheet;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Providers (scoped to this screen)
-// ─────────────────────────────────────────────────────────────────────────────
-
-final _sponseeProvider =
-    StreamProvider.autoDispose.family<Sponsee?, int>((ref, id) {
-  final repo = ref.watch(sponseeRepositoryProvider);
-  return repo.watchAll().map((list) {
-    try {
-      return list.firstWhere((s) => s.id == id);
-    } catch (_) {
-      return null;
-    }
-  });
-});
-
-final _stepProgressProvider =
-    StreamProvider.autoDispose.family<List<SponseeStepEntry>, int>(
-  (ref, sponseeId) =>
-      ref.watch(sponseeRepositoryProvider).watchStepProgress(sponseeId),
-);
-
-final _checkInsProvider =
-    StreamProvider.autoDispose.family<List<SponseeCheckIn>, int>(
-  (ref, sponseeId) =>
-      ref.watch(sponseeRepositoryProvider).watchCheckIns(sponseeId),
-);
-
-final _sponseeCallsProvider =
-    StreamProvider.autoDispose.family<List<TwelfthStepCall>, int>(
-  (ref, sponseeId) => ref
-      .watch(serviceCommitmentsRepositoryProvider)
-      .watchCallsForSponsee(sponseeId),
-);
+import 'providers/sponsee_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -60,7 +26,7 @@ class SponseeDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sponseeAsync = ref.watch(_sponseeProvider(sponseeId));
+    final sponseeAsync = ref.watch(sponseeProvider(sponseeId));
 
     return sponseeAsync.when(
       loading: () => const Scaffold(
@@ -368,7 +334,7 @@ class _StepProgressSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progressAsync = ref.watch(_stepProgressProvider(sponseeId));
+    final progressAsync = ref.watch(sponseeStepProgressProvider(sponseeId));
 
     return Card(
       elevation: 0,
@@ -536,7 +502,7 @@ class _CheckInsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final checkInsAsync = ref.watch(_checkInsProvider(sponsee.id));
+    final checkInsAsync = ref.watch(sponseeCheckInsProvider(sponsee.id));
     final now = DateTime.now();
 
     return Card(
@@ -748,7 +714,7 @@ class _SponseCallsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final callsAsync = ref.watch(_sponseeCallsProvider(sponsee.id));
+    final callsAsync = ref.watch(sponseeCallsProvider(sponsee.id));
 
     return Card(
       elevation: 0,

@@ -6,10 +6,7 @@ import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import '../../data/repositories/defect_repository.dart';
 import 'defect_discovery_wizard.dart';
-
-final defectsListProvider = StreamProvider<List<Defect>>((ref) {
-  return ref.watch(defectRepositoryProvider).watchAll();
-});
+import 'providers/defect_providers.dart';
 
 class DefectManagementScreen extends ConsumerWidget {
   const DefectManagementScreen({super.key});

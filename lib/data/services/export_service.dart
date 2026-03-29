@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -7,6 +8,7 @@ import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/database/database.dart';
+import '../../features/journal/data/step_tradition_content.dart';
 
 // Affects lookup: DB value → human-readable label
 const _affectsLabels = {
@@ -693,6 +695,231 @@ class ExportService {
       subject: 'Fearless Inventory — Step 4 Review',
       text: 'My Step 4 inventory for sponsor review.',
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 5. Recovery Journal PDF
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Generates a beautifully formatted personal journal PDF from all
+  /// [JournalEntry] records, styled to read like a physical journal.
+  ///
+  /// Layout:
+  ///   • Cover page with title, date range, and entry count
+  ///   • Entries grouped and sorted by Step → Tradition → Uncategorised
+  ///   • Within each group, entries appear in chronological order
+  ///   • Each entry occupies its own "page section" with date, optional title,
+  ///     and body text
+  ///   • Footer on every page: page number + disclaimer
+  static Future<void> generateJournalPdf(
+    List<JournalEntry> entries, {
+    String journalTitle = 'My Recovery Journal',
+  }) async {
+    if (entries.isEmpty) return;
+
+    final pdf = pw.Document();
+    final _dateFmtLong = DateFormat('MMMM d, yyyy');
+    final _dateFmtShort = DateFormat('MMM d, yyyy');
+
+    // Sort: Step 1..12 first, then Tradition 1..12, then uncategorised.
+    final sorted = List<JournalEntry>.from(entries);
+    sorted.sort((a, b) {
+      int groupA = _entryGroup(a);
+      int groupB = _entryGroup(b);
+      if (groupA != groupB) return groupA.compareTo(groupB);
+      return a.createdAt.compareTo(b.createdAt);
+    });
+
+    final dateRange = sorted.isNotEmpty
+        ? '${_dateFmtShort.format(sorted.first.createdAt)} – '
+          '${_dateFmtShort.format(sorted.last.createdAt)}'
+        : '';
+
+    // ── Cover page ──────────────────────────────────────────────────────────
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.letter,
+        margin: const pw.EdgeInsets.all(72),
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Spacer(),
+            pw.Text(
+              journalTitle,
+              style: pw.TextStyle(
+                fontSize: 32,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blueGrey800,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+            pw.SizedBox(height: 20),
+            pw.Container(
+              width: 60,
+              height: 2,
+              color: PdfColors.blueGrey300,
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              dateRange,
+              style: pw.TextStyle(
+                fontSize: 13,
+                color: PdfColors.blueGrey500,
+                fontStyle: pw.FontStyle.italic,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              '${sorted.length} ${sorted.length == 1 ? "entry" : "entries"}',
+              style: const pw.TextStyle(
+                  fontSize: 12, color: PdfColors.blueGrey400),
+            ),
+            pw.Spacer(),
+            pw.Spacer(),
+            _disclaimer(),
+          ],
+        ),
+      ),
+    );
+
+    // ── Group entries ───────────────────────────────────────────────────────
+    final groups = <String, List<JournalEntry>>{};
+    for (final e in sorted) {
+      final key = _entryGroupKey(e);
+      groups.putIfAbsent(key, () => []).add(e);
+    }
+
+    // ── Entry pages ─────────────────────────────────────────────────────────
+    for (final groupEntry in groups.entries) {
+      final groupLabel = groupEntry.key;
+      final groupEntries = groupEntry.value;
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.letter,
+          margin: const pw.EdgeInsets.fromLTRB(72, 56, 72, 56),
+          header: (ctx) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    groupLabel.toUpperCase(),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blueGrey500,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  pw.Text(
+                    journalTitle,
+                    style: const pw.TextStyle(
+                      fontSize: 9,
+                      color: PdfColors.blueGrey400,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(color: PdfColors.blueGrey200, thickness: 0.5),
+              pw.SizedBox(height: 12),
+            ],
+          ),
+          footer: (ctx) => pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Personal use only. Not affiliated with AA World Services.',
+                style: const pw.TextStyle(
+                    fontSize: 7, color: PdfColors.blueGrey300),
+              ),
+              pw.Text(
+                'Page ${ctx.pageNumber}',
+                style: const pw.TextStyle(
+                    fontSize: 8, color: PdfColors.blueGrey400),
+              ),
+            ],
+          ),
+          build: (ctx) {
+            final widgets = <pw.Widget>[];
+            for (int i = 0; i < groupEntries.length; i++) {
+              final e = groupEntries[i];
+              widgets.addAll(_buildEntryBlock(e, _dateFmtLong));
+              if (i < groupEntries.length - 1) {
+                widgets.add(pw.SizedBox(height: 32));
+                widgets.add(pw.Divider(
+                    color: PdfColors.blueGrey100, thickness: 0.5));
+                widgets.add(pw.SizedBox(height: 32));
+              }
+            }
+            return widgets;
+          },
+        ),
+      );
+    }
+
+    await Printing.layoutPdf(onLayout: (format) => pdf.save());
+  }
+
+  /// Formats a single journal entry as PDF widgets.
+  static List<pw.Widget> _buildEntryBlock(
+      JournalEntry e, DateFormat dateFmt) {
+    return [
+      // Date header
+      pw.Text(
+        dateFmt.format(e.createdAt),
+        style: pw.TextStyle(
+          fontSize: 10,
+          color: PdfColors.blueGrey400,
+          fontStyle: pw.FontStyle.italic,
+        ),
+      ),
+      pw.SizedBox(height: 8),
+      // Optional title
+      if (e.title != null && e.title!.isNotEmpty) ...[
+        pw.Text(
+          e.title!,
+          style: pw.TextStyle(
+            fontSize: 16,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.blueGrey800,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+      ],
+      // Body
+      pw.Text(
+        e.content,
+        style: const pw.TextStyle(
+          fontSize: 11,
+          color: PdfColors.blueGrey900,
+          lineSpacing: 4,
+        ),
+      ),
+    ];
+  }
+
+  /// Sort key: Steps 0–11, Traditions 100–111, Uncategorised 200.
+  static int _entryGroup(JournalEntry e) {
+    if (e.stepNumber != null) return e.stepNumber! - 1;
+    if (e.traditionNumber != null) return 100 + e.traditionNumber! - 1;
+    return 200;
+  }
+
+  static String _entryGroupKey(JournalEntry e) {
+    if (e.stepNumber != null) {
+      final content = StepTraditionContent.forStep(e.stepNumber!);
+      return content != null ? 'Step ${e.stepNumber}: ${content.title}' : 'Step ${e.stepNumber}';
+    }
+    if (e.traditionNumber != null) {
+      final content = StepTraditionContent.forTradition(e.traditionNumber!);
+      return content != null
+          ? 'Tradition ${e.traditionNumber}: ${content.title}'
+          : 'Tradition ${e.traditionNumber}';
+    }
+    return 'General Reflections';
   }
 
   /// Parses a JSON string previously created by [exportSponsorReviewJson].

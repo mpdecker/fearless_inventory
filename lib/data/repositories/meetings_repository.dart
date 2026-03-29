@@ -50,6 +50,34 @@ class MeetingsRepository {
         .write(MeetingsCompanion(isHomeGroup: Value(value)));
   }
 
+  /// All meetings the user has marked for planned attendance.
+  /// Ordered by weekday then start time so the Step 12 calendar can
+  /// expand them into recurring events across the displayed month.
+  Stream<List<Meeting>> watchPlannedMeetings() =>
+      (_db.select(_db.meetings)
+            ..where((t) => t.isPlannedAttendance.equals(true))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.weekday),
+              (t) => OrderingTerm.asc(t.startTime),
+            ]))
+          .watch();
+
+  /// Toggle planned-attendance flag for a single meeting.
+  Future<void> togglePlannedAttendance(Meeting m) async {
+    await (_db.update(_db.meetings)..where((t) => t.id.equals(m.id))).write(
+      MeetingsCompanion(
+        isPlannedAttendance: Value(!m.isPlannedAttendance),
+      ),
+    );
+  }
+
+  /// Explicitly set the planned-attendance flag (independent of current value).
+  Future<void> setPlannedAttendance(int meetingId,
+      {required bool value}) async {
+    await (_db.update(_db.meetings)..where((t) => t.id.equals(meetingId)))
+        .write(MeetingsCompanion(isPlannedAttendance: Value(value)));
+  }
+
   /// Upsert a batch of DTOs from one adapter.
   /// Returns (added, updated) counts.
   Future<(int, int)> upsertMeetings(
@@ -114,6 +142,7 @@ class MeetingsRepository {
       conferencePhone: Value(dto.conferencePhone),
       onlinePlatform: Value(platform),
       notes: Value(dto.notes),
+      language: Value(dto.language),
       lastSyncedAt: Value(DateTime.now()),
     );
   }

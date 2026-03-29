@@ -186,6 +186,11 @@ class TsmlPageAdapter implements MeetingSourceAdapter {
         // ── Time — convert 12-hour "6:00 am" to 24-hour "06:00" ───────
         final startTime = _parse12hTime(_str(rawM['time']) ?? '12:00 am');
 
+        // Infer language from type codes (mirrors TsmlAdapter heuristics).
+        String language = 'en';
+        if (types.contains('FR')) language = 'fr';
+        else if (types.contains('ES')) language = 'es';
+
         results.add(MeetingDto(
           externalId:    id,
           name:          _str(rawM['name']) ?? '(Unnamed Meeting)',
@@ -202,6 +207,7 @@ class TsmlPageAdapter implements MeetingSourceAdapter {
           typeCodes:     types,
           isOnline:      isOnline,
           isHybrid:      isHybrid,
+          language:      language,
         ));
       }
     }

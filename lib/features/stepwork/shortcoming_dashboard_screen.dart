@@ -7,39 +7,8 @@ import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import '../../data/repositories/shortcomings_repository.dart';
 import '../../data/repositories/defect_repository.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Providers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// All character defects (Step 6 catalog).
-final _defectCatalogProvider = StreamProvider.autoDispose<List<Defect>>(
-  (ref) => ref.watch(defectRepositoryProvider).watchAll(),
-);
-
-/// All shortcoming logs, most recent first.
-final _allLogsProvider = StreamProvider.autoDispose<List<ShortcomingLog>>(
-  (ref) => ref.watch(shortcomingRepositoryProvider).watchAll(),
-);
-
-/// Step 4 myPart phrases, filtered to exclude patterns that have already been
-/// saved as shortcoming descriptions.  Re-evaluates reactively whenever a
-/// shortcoming is logged or deleted (because it watches [_allLogsProvider]).
-final _step4PatternsProvider =
-    FutureProvider.autoDispose<List<String>>((ref) async {
-  // Watching _allLogsProvider means this re-runs when logs change.
-  final logs = ref.watch(_allLogsProvider).valueOrNull ?? [];
-  final usedDescriptions =
-      logs.map((l) => l.description.trim().toLowerCase()).toSet();
-
-  final allPhrases = await ref
-      .read(shortcomingRepositoryProvider)
-      .fetchStep4MyPartPhrases();
-
-  return allPhrases
-      .where((p) => !usedDescriptions.contains(p.trim().toLowerCase()))
-      .toList();
-});
+import 'providers/defect_providers.dart';
+import 'providers/shortcoming_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -50,8 +19,8 @@ class ShortcomingDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final defectsAsync = ref.watch(_defectCatalogProvider);
-    final logsAsync = ref.watch(_allLogsProvider);
+    final defectsAsync = ref.watch(defectsListProvider);
+    final logsAsync = ref.watch(allShortcomingLogsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -65,9 +34,9 @@ class ShortcomingDashboardScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(_defectCatalogProvider);
-          ref.invalidate(_allLogsProvider);
-          ref.invalidate(_step4PatternsProvider);
+          ref.invalidate(defectsListProvider);
+          ref.invalidate(allShortcomingLogsProvider);
+          ref.invalidate(step4PatternsProvider);
         },
         child: defectsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -377,7 +346,7 @@ class _Step4PatternsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final patternsAsync = ref.watch(_step4PatternsProvider);
+    final patternsAsync = ref.watch(step4PatternsProvider);
 
     return Card(
       elevation: 0,
@@ -560,7 +529,7 @@ class _LogShortcomingSheetState
 
   @override
   Widget build(BuildContext context) {
-    final defectsAsync = ref.watch(_defectCatalogProvider);
+    final defectsAsync = ref.watch(defectsListProvider);
 
     return Padding(
       padding: EdgeInsets.only(

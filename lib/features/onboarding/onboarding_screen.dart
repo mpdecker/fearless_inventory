@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/services/onboarding_service.dart';
-import '../../core/widgets/quote_card.dart';
 import '../home/home_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,64 +26,56 @@ class _OnboardingPage {
 const _pages = [
   // ── 1. Welcome ────────────────────────────────────────────────────────────
   _OnboardingPage(
-    title: 'A New Freedom Awaits',
+    title: 'A New Life Is Possible',
     body:
-        'Fearless Inventory is a private companion for serious Big Book '
-        'stepwork — designed to be worked alongside your sponsor, one day '
-        'at a time. Everything you enter stays encrypted on this device.',
+        'Recovery is not a destination — it\'s a daily way of life. '
+        'Fearless Inventory is your private companion for working all '
+        'twelve steps, building habits of accountability, and staying '
+        'close to your sponsor and fellowship. '
+        'Everything you enter stays encrypted on this device.',
     icon: Icons.auto_awesome_outlined,
     color: Color(0xFF3949AB), // indigo
     quote: RecoveryQuotes.welcome,
   ),
 
-  // ── 2. Step 4 ─────────────────────────────────────────────────────────────
+  // ── 2. Daily Practice ─────────────────────────────────────────────────────
   _OnboardingPage(
-    title: 'A Searching and Fearless Inventory',
+    title: 'One Day at a Time',
     body:
-        'The heart of the app is the four-column Step 4 worksheet — '
-        'resentments, fears, and harms — drawn directly from the Big Book. '
-        'Flag entries for your sponsor and export the full worksheet for your '
-        'Step 5 reading.',
-    icon: Icons.assignment_outlined,
-    color: Color(0xFFB71C1C), // dark red
-    quote: RecoveryQuotes.step4Inventory,
-  ),
-
-  // ── 3. Steps 5–9 ──────────────────────────────────────────────────────────
-  _OnboardingPage(
-    title: 'Admitted the Exact Nature of Our Wrongs',
-    body:
-        'Once your inventory is complete, the Step 5 Ceremony walks you '
-        'through the three admissions. Steps 6 and 7 map your character '
-        'defects and shortcomings. Steps 8 and 9 guide your amends list, '
-        'planning, and follow-through — including timeframes.',
-    icon: Icons.handshake_outlined,
-    color: Color(0xFF00695C), // dark teal
-    quote: RecoveryQuotes.step5Pocket,
-  ),
-
-  // ── 4. Daily Practice ─────────────────────────────────────────────────────
-  _OnboardingPage(
-    title: 'A Daily Reprieve',
-    body:
-        'The Step 10 daily inventory lets you log multiple incidents '
-        'throughout the day — each one distinct, each one honest. Morning '
-        'and evening Step 11 meditation screens support your conscious '
-        'contact with God.',
-    icon: Icons.nightlight_round_outlined,
+        'Your sobriety is contingent on the maintenance of your spiritual '
+        'condition — one day at a time. The Dashboard keeps your Step 11 '
+        'morning meditation, Step 10 evening inventory, and active stepwork '
+        'front and center. Small daily actions build the life the promises '
+        'describe.',
+    icon: Icons.loop_outlined,
     color: Color(0xFF4527A0), // deep purple
     quote: RecoveryQuotes.dailyReprieve,
   ),
 
-  // ── 5. Privacy & Begin ────────────────────────────────────────────────────
+  // ── 3. All Twelve Steps ───────────────────────────────────────────────────
   _OnboardingPage(
-    title: 'Your Inventory Stays Yours',
+    title: 'Into Action',
+    body:
+        'Every step has a dedicated home — from your fourth-step moral '
+        'inventory and fifth-step reading, through character defects and '
+        'shortcomings, your amends list, and on into service and sponsorship '
+        'in the twelfth. Work each step thoroughly, with your sponsor\'s '
+        'guidance, and carry what you learn forward.',
+    icon: Icons.format_list_numbered_outlined,
+    color: Color(0xFF00695C), // dark teal
+    quote: RecoveryQuotes.spiritualLife,
+  ),
+
+  // ── 4. Privacy + Begin ────────────────────────────────────────────────────
+  _OnboardingPage(
+    title: 'Your Recovery Stays Yours',
     body:
         'A unique encryption key is generated on this device and never '
-        'transmitted anywhere. You may wipe all data at any time from '
-        'Settings. Your fifth step is yours to share — with your Higher '
-        'Power, yourself, and the person you choose.',
-    icon: Icons.lock_outline,
+        'transmitted anywhere. Your fifth step is yours to share — with '
+        'your Higher Power, yourself, and the person you choose. '
+        'Use this tool with a sponsor. Stay in the middle of the herd. '
+        'The promises are real.',
+    icon: Icons.shield_outlined,
     color: Color(0xFF1B5E20), // dark green
     quote: RecoveryQuotes.promises,
   ),
@@ -164,7 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Dots
+                // Progress dots
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
@@ -184,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Next / Get Started
+                // Next / Begin My Recovery
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
@@ -198,7 +189,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     child: Text(
                       _current == _pages.length - 1
-                          ? 'Begin My Inventory'
+                          ? 'Begin My Recovery'
                           : 'Next',
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16),
@@ -269,9 +260,9 @@ class _OnboardingPageView extends StatelessWidget {
               Text(
                 page.body,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.82),
+                  color: Colors.white.withOpacity(0.85),
                   fontSize: 15,
-                  height: 1.6,
+                  height: 1.65,
                 ),
               ),
               const SizedBox(height: 28),
@@ -284,7 +275,7 @@ class _OnboardingPageView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border(
                     left: BorderSide(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withOpacity(0.35),
                       width: 3,
                     ),
                   ),
@@ -305,9 +296,7 @@ class _OnboardingPageView extends StatelessWidget {
                     Text(
                       '— ${page.quote.citation}',
                       style: TextStyle(
-                        color: page.color == const Color(0xFFB71C1C)
-                            ? Colors.redAccent.shade100
-                            : Colors.white.withOpacity(0.55),
+                        color: Colors.white.withOpacity(0.5),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.3,

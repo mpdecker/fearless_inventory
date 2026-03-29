@@ -1,5 +1,5 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../review_history_screen.dart';
+import 'review_providers.dart';
 
 final streakProvider = Provider<int>((ref) {
   final reviewsAsync = ref.watch(reviewsStreamProvider);

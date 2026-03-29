@@ -70,6 +70,10 @@ class QuoteCard extends StatelessWidget {
 
   Color _accentForCategory(QuoteCategory cat, ThemeData theme) {
     switch (cat) {
+      case QuoteCategory.step1:
+      case QuoteCategory.step2:
+      case QuoteCategory.step3:
+        return Colors.indigo;
       case QuoteCategory.step4:
         return Colors.redAccent;
       case QuoteCategory.step5:
@@ -85,6 +89,10 @@ class QuoteCard extends StatelessWidget {
         return Colors.indigo;
       case QuoteCategory.step11:
         return Colors.orange;
+      case QuoteCategory.step12:
+        return Colors.teal.shade700;
+      case QuoteCategory.tradition:
+        return Colors.purple.shade700;
       case QuoteCategory.promises:
         return Colors.amber.shade700;
       case QuoteCategory.general:

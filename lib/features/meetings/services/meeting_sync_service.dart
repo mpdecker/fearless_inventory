@@ -225,26 +225,361 @@ final meetingAdaptersProvider = Provider<List<MeetingSourceAdapter>>((ref) {
     //   baseUrl: 'https://www.berkshireintergroup.org',
     // ),
 
-    // ── Greater New York  (nearby, uncomment if needed) ──────────────────
-    // TsmlAdapter(
-    //   id:      'tsml-aa-nyc',
-    //   name:    'AA — Greater New York',
-    //   baseUrl: 'https://www.nyintergroup.org',
-    // ),
+    // ══════════════════════════════════════════════════════════════════════════
+    // EXPANSION BACKLOG — AA intergroup TSML feeds (audited Mar 2026)
+    // Status:  ✅ public feed confirmed  🔒 TSML present but restricted (403)
+    //          ❌ no TSML plugin found   ⚠️  inconclusive / needs re-check
+    //
+    // See docs/aa-coverage-tracker.xlsx for the full research spreadsheet,
+    // outreach status, estimated meeting counts, and the 5-phase action plan.
+    // ══════════════════════════════════════════════════════════════════════════
 
-    // ── HOW TO ADD YOUR LOCAL INTERGROUP ─────────────────────────────────
-    // 1. Open <site>/wp-json/ and check for "tsml" in the namespaces list.
-    // 2. Try GET <site>/wp-json/tsml/meetings — public feeds return a JSON array.
-    //    A 403 "feed_restricted" means the admin needs to set it to Public.
+    // ── PHASE 1 — Active ✅ (feeds verified public Mar 2026) ──────────────
+    //    ~2,350+ meetings added across 11 sites.
+
+    // ┌─ Mid-Atlantic ───────────────────────────────────────────────────────
+    TsmlAdapter(
+      id:      'tsml-aa-nyc',
+      name:    'AA — Greater New York',
+      baseUrl: 'https://www.nyintergroup.org',
+    ),
+
+    TsmlAdapter(
+      id:      'tsml-aa-baltimore',
+      name:    'AA — Baltimore',
+      baseUrl: 'https://www.baltimoreaa.org',
+    ),
+
+    // ┌─ Southeast ──────────────────────────────────────────────────────────
+    TsmlAdapter(
+      id:      'tsml-aa-atlanta',
+      name:    'AA — Metro Atlanta',
+      baseUrl: 'https://www.atlantaaa.org',
+    ),
+
+    TsmlAdapter(
+      id:      'tsml-aa-nashville',
+      name:    'AA — Middle Tennessee (Nashville)',
+      baseUrl: 'https://www.aanashville.org',
+    ),
+
+    // ┌─ South (Texas) ──────────────────────────────────────────────────────
+    TsmlAdapter(
+      id:      'tsml-aa-dallas',
+      name:    'AA — Dallas',
+      baseUrl: 'https://www.aadallas.org',
+    ),
+
+    TsmlAdapter(
+      id:      'tsml-aa-sanantonio',
+      name:    'AA — San Antonio',
+      baseUrl: 'https://www.aasanantonio.org',
+    ),
+
+    // ┌─ Mountain ───────────────────────────────────────────────────────────
+    TsmlAdapter(
+      id:      'tsml-aa-phoenix',
+      name:    'AA — Phoenix',
+      baseUrl: 'https://www.aaphoenix.org',
+    ),
+
+    TsmlAdapter(
+      id:      'tsml-aa-tucson',
+      name:    'AA — Tucson',
+      baseUrl: 'https://www.aatucson.org',
+    ),
+
+    // ┌─ Pacific Northwest ──────────────────────────────────────────────────
+    TsmlAdapter(
+      id:      'tsml-aa-seattle',
+      name:    'AA — Seattle',
+      baseUrl: 'https://www.seattleaa.org',
+    ),
+
+    // ┌─ California ─────────────────────────────────────────────────────────
+    TsmlAdapter(
+      id:      'tsml-aa-oakland',
+      name:    'AA — Oakland / East Bay',
+      baseUrl: 'https://www.aaoakland.org',
+    ),
+
+    TsmlAdapter(
+      id:      'tsml-aa-sandiego',
+      name:    'AA — San Diego',
+      baseUrl: 'https://www.aasandiego.org',
+    ),
+
+    // ── PHASE 2 — Restricted feeds; open via webmaster outreach ───────────
+    //    TSML is installed but feed is set to "Restricted".
+    //    Ask the intergroup webmaster to change the setting at:
+    //      WP Admin → Meetings → Settings → General → "Export meetings feed"
+    //    Once open, move to Phase 1 above and uncomment.
+    //
+    // 🔒 New Hampshire   — https://nhaa.net/contact
+    // TsmlAdapter(id: 'tsml-aa-nh', name: 'AA — New Hampshire',
+    //             baseUrl: 'https://nhaa.net'),
+    //
+    // 🔒 Charlotte NC (Metrolina Intergroup)
+    // TsmlAdapter(id: 'tsml-aa-charlotte', name: 'AA — Charlotte (Metrolina)',
+    //             baseUrl: 'https://www.charlotteaa.org'),
+    //
+    // 🔒 Chicago IL (403 on wp-json root itself — high-value target)
+    // TsmlAdapter(id: 'tsml-aa-chicago', name: 'AA — Chicago',
+    //             baseUrl: 'https://www.chicagoaa.org'),
+    //
+    // 🔒 Denver CO — DACC (401 on wp-json)
+    // TsmlAdapter(id: 'tsml-aa-denver', name: 'AA — Denver',
+    //             baseUrl: 'https://www.daccaa.org'),
+    //
+    // 🔒 New Orleans LA
+    // TsmlAdapter(id: 'tsml-aa-neworleans', name: 'AA — New Orleans',
+    //             baseUrl: 'https://www.aaneworleans.org'),
+    //
+    // 🔒 Sacramento CA
+    // TsmlAdapter(id: 'tsml-aa-sacramento', name: 'AA — Sacramento',
+    //             baseUrl: 'https://www.aasacramento.org'),
+
+    // ── PHASE 3 — Active ✅ (verified Mar 2026 on re-check) ───────────────
+    //    www.aa-dc.org had a TLS error; no-www resolves cleanly.
+    //    portlandaa.org / oregonaa.org both refused; pdxaa.org is the live site.
+
+    // ┌─ Mid-Atlantic ───────────────────────────────────────────────────────
+    // ✅ ~101 meetings — use bare domain (www has a TLS cert mismatch)
+    TsmlAdapter(
+      id:      'tsml-aa-dc',
+      name:    'AA — Washington DC',
+      baseUrl: 'https://aa-dc.org',
+    ),
+
+    // ┌─ Pacific Northwest ──────────────────────────────────────────────────
+    // ✅ ~150+ meetings — pdxaa.org is the canonical Portland intergroup site
+    TsmlAdapter(
+      id:      'tsml-aa-portland',
+      name:    'AA — Portland',
+      baseUrl: 'https://www.pdxaa.org',
+    ),
+
+    // ── PHASE 3 — Resolved ❌ (moved to Phase 4 after exhausting alternates) ─
+    //
+    // ❌ Houston TX — all three domains failed (timeout / 500 / ECONNREFUSED):
+    //      www.aahouston.org, aahouston.org, aacentralofficehouston.org
+    //
+    // ❌ Kansas City MO — all domains JS-redirect to /lander (no API exposed):
+    //      www.aakc.org, aakc.org, www.kcintergroup.org
+    //
+    // ❌ Los Angeles CA — laintergroup.org → laintergroup.com (no wp-json);
+    //      aala.org JS-redirect to /lander; no TSML found on any alternate.
+    //      LA is the biggest missing metro — worth a direct outreach to
+    //      Los Angeles Intergroup asking them to adopt TSML or share a feed.
+    //
+    // ❌ San Francisco CA — aasf.org redirects to aasfmarin.org which has
+    //      WordPress REST but uses Tribe Events, not TSML.
+    //      sfaa.org = 404; aasf.com = 404; intergroup.org = JS redirect.
+
+    // ── PHASE 4 — Active ✅ (found via alternate domain, verified Mar 2026) ──
+    //    These were originally listed with wrong canonical domains.
+    //    All confirmed public TSML REST feeds.
+
+    // ┌─ Midwest ────────────────────────────────────────────────────────────
+    // ✅ ~450 KB data — canonical domain is indyaa.org, not aaindianapolis.org
+    TsmlAdapter(
+      id:      'tsml-aa-indianapolis',
+      name:    'AA — Indianapolis',
+      baseUrl: 'https://www.indyaa.org',
+    ),
+
+    // ✅ ~960 KB data — canonical domain is aastl.org, not aastlouis.org
+    TsmlAdapter(
+      id:      'tsml-aa-stlouis',
+      name:    'AA — St. Louis',
+      baseUrl: 'https://aastl.org',
+    ),
+
+    // ┌─ South (Texas) ──────────────────────────────────────────────────────
+    // ✅ ~1 MB data — canonical domain is austinaa.org, not aaaustin.org
+    TsmlAdapter(
+      id:      'tsml-aa-austin',
+      name:    'AA — Austin',
+      baseUrl: 'https://austinaa.org',
+    ),
+
+    // ── PHASE 4 — No accessible data feed; outreach needed ────────────────
+    //    Domain audited Mar 2026.  Options remaining:
+    //    a) Contact intergroup to adopt TSML or publish a JSON export
+    //    b) Re-check annually — many interlgroups are updating their tech
+    //
+    // ❌ Maine ME          — maineaa.org (EventEspresso; /wp-json/em/v2/events → 404)
+    // ❌ Philadelphia PA   — philaaa.org, philaintergroup.org, aaphiladelphia.org
+    //                        all ECONNREFUSED; no reachable domain found Mar 2026
+    // ❌ Northern NJ       — nnjaa.org accessible but is a static site (no WP/API)
+    // ❌ Western PA        — wpaaa.org (ad-hijacked domain); wpaaintergroup.org → 404
+    // ❌ Miami FL          — aaofmiami.org, aamiami.org all ECONNREFUSED Mar 2026
+    // ❌ Orlando FL        — aaorlando.org, aaorlandofl.org all ECONNREFUSED Mar 2026
+    // ❌ Tampa Bay FL      — tampabayaa.org → usaftba.org (no TSML); tbaa.org → 404
+    // ❌ Minneapolis MN    — aaminneapolis.org (Tribe Events plugin; only 49 one-off
+    //                        special events, no recurring weekly meeting calendar)
+    // ❌ Detroit MI        — aadetroit.org, aadetroitintergroup.org all ECONNREFUSED
+    // ❌ Cleveland OH      — aacleveland.org empty response; no alternate found
+    // ❌ Columbus OH       — aacolumbus.org ECONNREFUSED; columbusintergroup.org → 404
+    // ❌ Milwaukee WI      — aamilwaukee.org → aamilwaukee.com (static site, no WP)
+    // ❌ Salt Lake City UT — aaslc.org ECONNREFUSED; slcaa.org, saltlakecityaa.org → 404
+    // ❌ Albuquerque NM    — aaalbuquerque.org ECONNREFUSED; no alternate found
+    // ❌ Orange County CA  — aaorangecounty.org ECONNREFUSED; no alternate found
+    // ❌ Houston TX        — aahouston.org + aacentraloffice.org all timeout/refused
+    // ❌ Kansas City MO    — aakc.org + kcintergroup.org (JS redirect wall)
+    // ❌ Los Angeles CA    — laintergroup.com (no wp-json); aala.org (JS redirect)
+    //                        Highest-value missing metro; recommend direct outreach.
+    // ❌ San Francisco CA  — aasf.org → aasfmarin.org (Tribe Events, not TSML)
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // CANADA — AA intergroup TSML feeds (audited Mar 2026)
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // Canadian feeds follow identical TSML v2 conventions as US feeds.
+    // Country code is 'CA'; province abbreviations are used for `state`.
+    //
+    // Status:  ✅ public feed confirmed  🔒 TSML present but restricted (403)
+    //          ❌ no TSML plugin found   ⚠️  inconclusive / needs re-check
+    //
+    // See docs/aa-coverage-tracker.xlsx (Canada tab) for the full research
+    // spreadsheet, outreach status, and the 5-phase action plan.
+    //
+    // ── CANADA ACTIVE ✅ (feeds verified public Mar 2026) ──────────────────
+    //    ~2,493 meetings across 4 provinces.
+
+    // ┌─ British Columbia & Yukon ───────────────────────────────────────────
+    // ✅ ~1,131 meetings — bcyukonaa.org covers BC + Yukon territory
+    TsmlAdapter(
+      id:      'tsml-aa-bcyukon',
+      name:    'AA — British Columbia & Yukon',
+      baseUrl: 'https://www.bcyukonaa.org',
+    ),
+
+    // ┌─ Alberta ────────────────────────────────────────────────────────────
+    // ✅ ~453 meetings — Calgary Intergroup serves greater Alberta
+    TsmlAdapter(
+      id:      'tsml-aa-calgary',
+      name:    'AA — Calgary',
+      baseUrl: 'https://www.calgaryaa.org',
+    ),
+
+    // ┌─ Manitoba ───────────────────────────────────────────────────────────
+    // ✅ ~414 meetings — use bare domain (www triggers a redirect that some
+    //    HTTP clients don't follow; bare domain responds directly)
+    TsmlAdapter(
+      id:      'tsml-aa-manitoba',
+      name:    'AA — Manitoba',
+      baseUrl: 'https://aamanitoba.org',
+    ),
+
+    // ┌─ Ontario ────────────────────────────────────────────────────────────
+    // ✅ ~495 meetings — Toronto Central Intergroup
+    TsmlAdapter(
+      id:      'tsml-aa-toronto',
+      name:    'AA — Toronto',
+      baseUrl: 'https://www.aatoronto.org',
+    ),
+
+    // ┌─ Saskatchewan ───────────────────────────────────────────────────────
+    // ✅ ~85 meetings — Regina Intergroup; no separate Saskatoon feed found
+    TsmlAdapter(
+      id:      'tsml-aa-regina',
+      name:    'AA — Regina (Saskatchewan)',
+      baseUrl: 'https://aaregina.org',
+    ),
+
+    // ┌─ Atlantic Canada ────────────────────────────────────────────────────
+    // ✅ ~89 meetings — Halifax Intergroup covers Nova Scotia
+    TsmlAdapter(
+      id:      'tsml-aa-halifax',
+      name:    'AA — Halifax (Nova Scotia)',
+      baseUrl: 'https://www.aahalifax.org',
+    ),
+
+    // ── CANADA RESTRICTED / NO FEED — outreach targets ────────────────────
+    //
+    // 🔒 aa.org (national, US/CA combined) — TSML confirmed, 403 on feed
+    //
+    // ❌ aaswo.org — Southwestern Ontario — WordPress REST present; no TSML ns
+    // ❌ aanb.org  — New Brunswick — WordPress REST present; no TSML ns
+    //
+    // ❌ Montréal QC — aaqc.ca JS-redirects to /lander (no API);
+    //        aa-montreal.qc.ca, aamontreal.org, intergroupe.qc.ca,
+    //        intergroupe-aa.ca all ECONNREFUSED / DNS failure Mar 2026.
+    //        Largest missing Canadian city. French-language meetings expected.
+    //        Recommend direct outreach to Montréal intergroup.
+    //
+    // ❌ Ottawa ON  — aaottawa.org, ottawaaintergroup.org, aacentralottawa.org,
+    //        ottawavalleyaa.org, ottawaaa.com, aaottawagatineau.org
+    //        all DNS failure Mar 2026. No reachable domain found.
+    //
+    // ❌ Edmonton AB — edmontonaa.org, edmontonintergroup.com, aaalberta.org,
+    //        aacentralalberta.org, edmontonaa.ca all DNS failure Mar 2026.
+    //
+    // ⚠️  Québec City QC — aaquebc.org, intergroupe-quebec.org, aa-quebec.qc.ca
+    //        all ECONNREFUSED. French-language meetings expected once found.
+    // ⚠️  Winnipeg MB  — aamanitoba.org covers Manitoba; no city-specific feed
+    // ⚠️  Newfoundland  — aanlnl.ca, aanl.ca all ECONNREFUSED Mar 2026
+
+    // ── HOW TO ADD A NEW INTERGROUP ────────────────────────────────────────
+    // 1. GET <site>/wp-json/  → check for "tsml" in the namespaces array.
+    // 2. GET <site>/wp-json/tsml/meetings → JSON array = public; 403 = restricted.
+    // 3. If public: add a TsmlAdapter here with a unique id and baseUrl.
+    //    If restricted: contact the webmaster (see Phase 2 note above).
     // TsmlAdapter(
     //   id:      'tsml-aa-<unique-id>',
-    //   name:    'AA — <Your City/Region>',
+    //   name:    'AA — <City/Region>',
     //   baseUrl: 'https://your-intergroup-site.org',
     // ),
 
-    // ── NA — scaffolded; uncomment with a verified regional URL ───────────
-    // NaMeetingGuideAdapter.newEngland(
-    //   customBaseUrl: 'https://<na-region-site>/wp-json/twelvesteplist/v2/meetings',
+    // ══════════════════════════════════════════════════════════════════════════
+    // NA — New England (NERNA)
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // NERNA (New England Region of NA) covers Massachusetts + Rhode Island.
+    //   Primary website: https://nerna.org
+    //   Areas: Boston, Cape Cod, Central MA, Greater Providence, Greater
+    //          Worcester, Martha's Vineyard, Metro West, Nantucket, Northeast
+    //          MA, Southeast MA, South Shore, Pioneer Valley, Western MA.
+    //
+    // TSML status verified Mar 2026:
+    //   🔒 nerna.org — "12 Step Meeting List" plugin confirmed installed,
+    //      but the REST feed is set to "Restricted" (HTTP 403).
+    //      To enable: ask NERNA's webmaster to set the feed to "Public" at
+    //      WP Admin → Meetings → Settings → General → "Export meetings feed".
+    //      Contact form: https://nerna.org/contact-us/
+    //
+    // ── Option A: TSML direct (preferred once feed is open) ──────────────
+    // TsmlAdapter(
+    //   id:        'tsml-na-nerna',
+    //   name:      'NA — New England (NERNA)',
+    //   baseUrl:   'https://nerna.org',
+    //   fellowship: 'NA',
+    // ),
+    //
+    // ── Option B: NAWS state-filtered (pending NAWS endpoint update) ──────
+    // The NAWS bulk-query endpoint at na.org/meetingsearch/searchresults.php
+    // returns HTTP 404 as of Mar 2026.  Uncomment below once a replacement
+    // URL is confirmed; pass it via customBaseUrl.
+    //
+    // NaMeetingGuideAdapter.nerna(
+    //   customBaseUrl: 'https://<verified-naws-or-nerna-endpoint>',
+    // ),
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // NA — Northern New England (NNERNA)
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // NNERNA covers NH, ME, and VT.
+    //   Primary website: https://nnerna.org
+    //
+    // TSML status verified Mar 2026:
+    //   ❌ nnerna.org — WordPress REST API present but no "tsml" namespace;
+    //      site uses Events Manager plugin for meetings instead.
+    //      Monitor for future TSML migration or a standalone JSON export.
+    //
+    // NaMeetingGuideAdapter.nnerna(
+    //   customBaseUrl: 'https://<verified-nnerna-endpoint>',
     // ),
   ];
 });

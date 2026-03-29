@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/database/database.dart';
 import '../../data/repositories/resentment_repository.dart';
+import 'providers/inventory_providers.dart';
 import 'resentment_entry_screen.dart';
-
-// Provider to manage the stream of resentments
-final resentmentsStreamProvider = StreamProvider<List<Resentment>>((ref) {
-  return ref.watch(resentmentRepositoryProvider).watchAllResentments();
-});
 
 class ResentmentListScreen extends ConsumerWidget {
   const ResentmentListScreen({super.key});

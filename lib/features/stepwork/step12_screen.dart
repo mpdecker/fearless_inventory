@@ -9,8 +9,10 @@ import '../../core/database/database.dart';
 import '../../data/repositories/step12_repository.dart';
 import '../../data/repositories/service_commitments_repository.dart';
 import '../../data/repositories/sponsee_repository.dart';
+import '../../data/repositories/meetings_repository.dart';
 import '../meetings/services/meeting_calendar_service.dart';
 import 'sponsee_detail_screen.dart';
+import 'providers/step12_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Event type metadata
@@ -43,18 +45,6 @@ enum Step12EventType {
     }
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Providers
-// ─────────────────────────────────────────────────────────────────────────────
-
-final _allEventsProvider = StreamProvider<List<StepTwelveEvent>>(
-  (ref) => ref.watch(step12RepositoryProvider).watchAll(),
-);
-
-final _allSponseesProvider = StreamProvider<List<Sponsee>>(
-  (ref) => ref.watch(sponseeRepositoryProvider).watchAll(),
-);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Root screen — tabs: Calendar | Sponsees | Service
@@ -168,174 +158,375 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Union item type for the calendar (Step 12 events + planned meetings)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CalItem {
+  final String title;
+  final DateTime date; // concrete date on the calendar
+  final String? timeDisplay; // e.g. "7:30 PM"
+  final String? subtitle;
+  final Step12EventType type;
+  final bool isPlannedMeeting;
+  final StepTwelveEvent? stepEvent;
+  final Meeting? meeting;
+
+  const _CalItem({
+    required this.title,
+    required this.date,
+    this.timeDisplay,
+    this.subtitle,
+    required this.type,
+    required this.isPlannedMeeting,
+    this.stepEvent,
+    this.meeting,
+  });
+
+  static final _timeFmt = DateFormat('h:mm a');
+
+  factory _CalItem.fromEvent(StepTwelveEvent e) {
+    final hasTime = e.startTime.hour != 0 || e.startTime.minute != 0;
+    final timeStr = hasTime ? _timeFmt.format(e.startTime) : null;
+    return _CalItem(
+      title: e.title,
+      date: e.startTime,
+      timeDisplay: timeStr,
+      subtitle: e.location,
+      type: Step12EventType.fromString(e.eventType),
+      isPlannedMeeting: false,
+      stepEvent: e,
+    );
+  }
+
+  factory _CalItem.fromPlannedMeeting(Meeting m, DateTime date) {
+    // Parse "HH:mm" wall-clock time into a display string
+    String? timeDisplay;
+    final parts = m.startTime.split(':');
+    if (parts.length == 2) {
+      final h = int.tryParse(parts[0]) ?? 0;
+      final min = int.tryParse(parts[1]) ?? 0;
+      final dt = DateTime(date.year, date.month, date.day, h, min);
+      timeDisplay = _timeFmt.format(dt);
+    }
+    return _CalItem(
+      title: m.name,
+      date: DateTime(date.year, date.month, date.day),
+      timeDisplay: timeDisplay,
+      subtitle: m.locationName ?? m.city,
+      type: Step12EventType.meeting,
+      isPlannedMeeting: true,
+      meeting: m,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Calendar tab
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _CalendarTab extends HookConsumerWidget {
   const _CalendarTab();
 
+  // ── Weekday helpers ───────────────────────────────────────────────────────
+
+  /// Normalise a DateTime to midnight — used as map key.
+  static DateTime _dayKey(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+  /// Dart's weekday: 1=Mon … 7=Sun.
+  /// Meetings weekday:  0=Sun … 6=Sat.
+  /// Convert: (dart % 7) gives 0=Sun, 1=Mon, … 6=Sat.
+  static int _dartToMeetingWeekday(int dartWeekday) => dartWeekday % 7;
+
+  /// Expand [plannedMeetings] into one _CalItem per matching day in [start]..[end].
+  static List<_CalItem> _expandPlanned(
+    List<Meeting> plannedMeetings,
+    DateTime start,
+    DateTime end,
+  ) {
+    final items = <_CalItem>[];
+    for (var d = _dayKey(start);
+        !d.isAfter(_dayKey(end));
+        d = d.add(const Duration(days: 1))) {
+      final meetingWd = _dartToMeetingWeekday(d.weekday);
+      for (final m in plannedMeetings) {
+        if (m.weekday == meetingWd) {
+          items.add(_CalItem.fromPlannedMeeting(m, d));
+        }
+      }
+    }
+    return items;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final eventsAsync = ref.watch(_allEventsProvider);
+    final eventsAsync = ref.watch(step12EventsProvider);
+    final plannedAsync = ref.watch(plannedMeetingsProvider);
     final focusedDay = useState(DateTime.now());
     final selectedDay = useState<DateTime>(DateTime.now());
     final calendarFormat = useState(CalendarFormat.month);
 
-    return eventsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (events) {
-        // Build a lookup map: day key → list of events
-        final eventMap = <DateTime, List<StepTwelveEvent>>{};
-        for (final e in events) {
-          final key = _dayKey(e.startTime);
-          (eventMap[key] ??= []).add(e);
-        }
+    if (eventsAsync.isLoading || plannedAsync.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (eventsAsync.hasError) {
+      return Center(child: Text('Error: ${eventsAsync.error}'));
+    }
 
-        List<StepTwelveEvent> eventsForDay(DateTime day) =>
-            eventMap[_dayKey(day)] ?? [];
+    final stepEvents = eventsAsync.value ?? [];
+    final planned = plannedAsync.value ?? [];
 
-        final selectedEvents = eventsForDay(selectedDay.value);
+    // ── Build unified day→items map ──────────────────────────────────────────
+    final eventMap = <DateTime, List<_CalItem>>{};
 
-        return Column(
-          children: [
-            // ── Calendar ──────────────────────────────────────────────
-            TableCalendar<StepTwelveEvent>(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2035, 12, 31),
-              focusedDay: focusedDay.value,
-              selectedDayPredicate: (day) =>
-                  isSameDay(selectedDay.value, day),
-              calendarFormat: calendarFormat.value,
-              eventLoader: eventsForDay,
-              startingDayOfWeek: StartingDayOfWeek.sunday,
-              headerStyle: HeaderStyle(
-                formatButtonVisible: true,
-                formatButtonDecoration: BoxDecoration(
-                  border: Border.all(
-                      color: Theme.of(context).colorScheme.primary),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                formatButtonTextStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 13),
-                titleCentered: true,
-              ),
-              calendarStyle: CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color:
-                      Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                ),
-                selectedDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                markerDecoration: const BoxDecoration(
-                  color: Colors.orange,
-                  shape: BoxShape.circle,
-                ),
-                outsideDaysVisible: false,
-              ),
-              calendarBuilders: CalendarBuilders(
-                // Colour-coded dots per event type
-                markerBuilder: (ctx, day, dayEvents) {
-                  if (dayEvents.isEmpty) return const SizedBox.shrink();
-                  final shown = dayEvents.take(4).toList();
-                  return Positioned(
-                    bottom: 4,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: shown.map((e) {
-                        final type = Step12EventType.fromString(e.eventType);
-                        return Container(
-                          width: 6,
-                          height: 6,
-                          margin:
-                              const EdgeInsets.symmetric(horizontal: 1.5),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: type.color,
-                          ),
-                        );
-                      }).toList(),
+    // 1. Step 12 manually-entered events
+    for (final e in stepEvents) {
+      final key = _dayKey(e.startTime);
+      (eventMap[key] ??= []).add(_CalItem.fromEvent(e));
+    }
+
+    // 2. Planned meetings, expanded for a ±3-month window around focusedDay
+    final windowStart =
+        DateTime(focusedDay.value.year, focusedDay.value.month - 2, 1);
+    final windowEnd =
+        DateTime(focusedDay.value.year, focusedDay.value.month + 3, 0);
+    for (final item in _expandPlanned(planned, windowStart, windowEnd)) {
+      (eventMap[_dayKey(item.date)] ??= []).add(item);
+    }
+
+    // Sort each day's items so planned meetings come first (by time), then events
+    for (final items in eventMap.values) {
+      items.sort((a, b) {
+        final aTime = '${a.isPlannedMeeting ? '0' : '1'}${a.timeDisplay ?? ''}';
+        final bTime = '${b.isPlannedMeeting ? '0' : '1'}${b.timeDisplay ?? ''}';
+        return aTime.compareTo(bTime);
+      });
+    }
+
+    List<_CalItem> itemsForDay(DateTime day) =>
+        eventMap[_dayKey(day)] ?? [];
+
+    final selectedItems = itemsForDay(selectedDay.value);
+
+    return Column(
+      children: [
+        // ── Calendar ──────────────────────────────────────────────────
+        TableCalendar<_CalItem>(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2035, 12, 31),
+          focusedDay: focusedDay.value,
+          selectedDayPredicate: (day) =>
+              isSameDay(selectedDay.value, day),
+          calendarFormat: calendarFormat.value,
+          eventLoader: itemsForDay,
+          startingDayOfWeek: StartingDayOfWeek.sunday,
+          headerStyle: HeaderStyle(
+            formatButtonVisible: true,
+            formatButtonDecoration: BoxDecoration(
+              border: Border.all(
+                  color: Theme.of(context).colorScheme.primary),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            formatButtonTextStyle: TextStyle(
+                color: Theme.of(context).colorScheme.primary, fontSize: 13),
+            titleCentered: true,
+          ),
+          calendarStyle: CalendarStyle(
+            todayDecoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+            markerDecoration: const BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+            ),
+            outsideDaysVisible: false,
+          ),
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (ctx, day, items) {
+              if (items.isEmpty) return const SizedBox.shrink();
+              final shown = items.take(4).toList();
+              return Positioned(
+                bottom: 4,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: shown.map((item) => Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // Planned meetings: solid dot; step events: slightly transparent
+                      color: item.isPlannedMeeting
+                          ? Step12EventType.meeting.color
+                          : item.type.color,
                     ),
-                  );
-                },
+                  )).toList(),
+                ),
+              );
+            },
+          ),
+          onDaySelected: (selected, focused) {
+            selectedDay.value = selected;
+            focusedDay.value = focused;
+          },
+          onFormatChanged: (fmt) => calendarFormat.value = fmt,
+          onPageChanged: (focused) => focusedDay.value = focused,
+        ),
+
+        const Divider(height: 1),
+
+        // ── Selected day header ──────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            children: [
+              Text(
+                DateFormat('EEEE, MMM d').format(selectedDay.value),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 15),
               ),
-              onDaySelected: (selected, focused) {
-                selectedDay.value = selected;
-                focusedDay.value = focused;
-              },
-              onFormatChanged: (fmt) => calendarFormat.value = fmt,
-              onPageChanged: (focused) => focusedDay.value = focused,
-            ),
-
-            const Divider(height: 1),
-
-            // ── Selected day header ────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Row(
-                children: [
-                  Text(
-                    DateFormat('EEEE, MMM d').format(selectedDay.value),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => Step12Screen.openAddEventForDay(
-                        context, selectedDay.value),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add'),
-                  ),
-                ],
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => Step12Screen.openAddEventForDay(
+                    context, selectedDay.value),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add'),
               ),
-            ),
+            ],
+          ),
+        ),
 
-            // ── Events for selected day ────────────────────────────────
-            Expanded(
-              child: selectedEvents.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No events scheduled',
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 14),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
-                      itemCount: selectedEvents.length,
-                      itemBuilder: (_, i) =>
-                          _EventTile(event: selectedEvents[i]),
-                    ),
-            ),
-          ],
-        );
-      },
+        // ── Events/meetings for selected day ─────────────────────────
+        Expanded(
+          child: selectedItems.isEmpty
+              ? Center(
+                  child: Text(
+                    'No events scheduled',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
+                  itemCount: selectedItems.length,
+                  itemBuilder: (_, i) {
+                    final item = selectedItems[i];
+                    return item.isPlannedMeeting
+                        ? _PlannedMeetingTile(item: item, ref: ref)
+                        : _EventTile(item: item);
+                  },
+                ),
+        ),
+      ],
     );
   }
-
-  /// Normalise a DateTime to midnight for use as a map key.
-  static DateTime _dayKey(DateTime dt) =>
-      DateTime(dt.year, dt.month, dt.day);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Single event tile
+// Planned-meeting calendar tile (recurring meeting from Meetings tab)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PlannedMeetingTile extends StatelessWidget {
+  final _CalItem item;
+  final WidgetRef ref;
+  // ignore: prefer_const_constructors_in_immutables
+  _PlannedMeetingTile({required this.item, required this.ref});
+
+  static const _meetingColor = Color(0xFFE65100); // orange
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _meetingColor.withOpacity(0.25)),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: _meetingColor.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.groups_outlined,
+              color: _meetingColor, size: 20),
+        ),
+        title: Text(item.title,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 15)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (item.timeDisplay != null)
+              Text(item.timeDisplay!,
+                  style: const TextStyle(
+                      color: _meetingColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500)),
+            if (item.subtitle != null && item.subtitle!.isNotEmpty)
+              Text('📍 ${item.subtitle}',
+                  style: TextStyle(
+                      color: Colors.grey.shade600, fontSize: 12)),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _meetingColor.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text('Meeting',
+                  style: TextStyle(
+                      color: _meetingColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(width: 4),
+            // Quick toggle: unplan from here
+            IconButton(
+              icon: const Icon(Icons.bookmark_remove_outlined,
+                  size: 20, color: _meetingColor),
+              tooltip: 'Remove from calendar',
+              onPressed: () async {
+                final m = item.meeting!;
+                await ref
+                    .read(meetingsRepositoryProvider)
+                    .togglePlannedAttendance(m);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Single step-event tile (manually-entered Step 12 events)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _EventTile extends ConsumerWidget {
-  final StepTwelveEvent event;
-  const _EventTile({required this.event});
-
-  static final _timeFmt = DateFormat('h:mm a');
+  final _CalItem item;
+  // ignore: prefer_const_constructors_in_immutables
+  _EventTile({required this.item});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final type = Step12EventType.fromString(event.eventType);
-    final hasTime = event.startTime.hour != 0 || event.startTime.minute != 0;
+    final event = item.stepEvent!;
+    final type = item.type;
 
     return Card(
       elevation: 0,
@@ -362,9 +553,9 @@ class _EventTile extends ConsumerWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (hasTime)
+            if (item.timeDisplay != null)
               Text(
-                _buildTimeRange(),
+                item.timeDisplay!,
                 style: TextStyle(
                     color: type.color,
                     fontSize: 12,
@@ -442,12 +633,6 @@ class _EventTile extends ConsumerWidget {
     );
   }
 
-  String _buildTimeRange() {
-    final start = _timeFmt.format(event.startTime);
-    if (event.endTime == null) return start;
-    final end = _timeFmt.format(event.endTime!);
-    return '$start – $end';
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -791,7 +976,7 @@ class _SponseeTab extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sponseesAsync = ref.watch(_allSponseesProvider);
+    final sponseesAsync = ref.watch(allSponseesProvider);
 
     return sponseesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -1398,13 +1583,6 @@ const _kPositionSuggestions = [
 // Commitments view
 // ─────────────────────────────────────────────────────────────────────────────
 
-final _activeCommitmentsProvider = StreamProvider<List<ServiceCommitment>>(
-  (ref) => ref.watch(serviceCommitmentsRepositoryProvider).watchActive(),
-);
-final _historyCommitmentsProvider = StreamProvider<List<ServiceCommitment>>(
-  (ref) => ref.watch(serviceCommitmentsRepositoryProvider).watchHistory(),
-);
-
 class _CommitmentsView extends HookConsumerWidget {
   const _CommitmentsView();
 
@@ -1412,8 +1590,8 @@ class _CommitmentsView extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeAsync = ref.watch(_activeCommitmentsProvider);
-    final historyAsync = ref.watch(_historyCommitmentsProvider);
+    final activeAsync = ref.watch(activeServiceCommitmentsProvider);
+    final historyAsync = ref.watch(historyServiceCommitmentsProvider);
     final showHistory = useState(false);
 
     return activeAsync.when(
@@ -1881,30 +2059,15 @@ enum StepCallType {
       values.firstWhere((e) => e.value == s, orElse: () => general);
 }
 
-final _stepCallsProvider = StreamProvider<List<TwelfthStepCall>>(
-  (ref) => ref.watch(serviceCommitmentsRepositoryProvider).watchCalls(),
-);
-final _scheduledCallsProvider = StreamProvider<List<TwelfthStepCall>>(
-  (ref) =>
-      ref.watch(serviceCommitmentsRepositoryProvider).watchScheduledCalls(),
-);
-final _pastCallsProvider = StreamProvider<List<TwelfthStepCall>>(
-  (ref) => ref.watch(serviceCommitmentsRepositoryProvider).watchPastCalls(),
-);
-final _callsThisMonthProvider = StreamProvider<int>(
-  (ref) =>
-      ref.watch(serviceCommitmentsRepositoryProvider).watchCallsThisMonth(),
-);
-
 class _StepCallsView extends HookConsumerWidget {
   const _StepCallsView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheduledAsync = ref.watch(_scheduledCallsProvider);
-    final pastAsync = ref.watch(_pastCallsProvider);
-    final monthCountAsync = ref.watch(_callsThisMonthProvider);
-    final allAsync = ref.watch(_stepCallsProvider);
+    final scheduledAsync = ref.watch(scheduledStepCallsProvider);
+    final pastAsync = ref.watch(pastStepCallsProvider);
+    final monthCountAsync = ref.watch(stepCallsThisMonthProvider);
+    final allAsync = ref.watch(twelfthStepCallsProvider);
 
     return allAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),

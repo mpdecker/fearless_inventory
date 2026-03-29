@@ -5,10 +5,12 @@ import '../../core/services/onboarding_service.dart';
 import '../../core/providers/sobriety_provider.dart';
 import '../../data/services/export_service.dart';
 import '../../data/repositories/inventory_repository.dart';
+import '../../data/repositories/journal_repository.dart';
 import '../../data/repositories/review_repository.dart';
 import '../../data/repositories/amends_repository.dart';
 import '../../core/database/database.dart';
 import '../onboarding/onboarding_screen.dart';
+import 'screens/literature_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -67,6 +69,46 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Export Amends to Excel'),
             subtitle: const Text('Full restitution plan with status columns'),
             onTap: () => _handleExcelExport(ref),
+          ),
+
+          // ── Journal PDF ────────────────────────────────────────────────
+          ListTile(
+            leading:
+                const Icon(Icons.menu_book_outlined, color: Colors.indigoAccent),
+            title: const Text('Export Recovery Journal (PDF)'),
+            subtitle: const Text(
+                'All journal entries formatted as a personal journal — '
+                'grouped by Step and Tradition'),
+            onTap: () => _handleJournalPdfExport(context, ref),
+          ),
+
+          const Divider(),
+          _buildSectionHeader('Literature'),
+
+          // ── Big Book ───────────────────────────────────────────────────
+          ListTile(
+            leading: const Icon(Icons.auto_stories_outlined,
+                color: Color(0xFF1A56DB)),
+            title: const Text('The Big Book'),
+            subtitle: const Text(
+                'Alcoholics Anonymous — chapter navigator with bookmarks'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const LiteratureScreen(initialTab: 0)),
+            ),
+          ),
+
+          // ── 12 & 12 ────────────────────────────────────────────────────
+          ListTile(
+            leading: const Icon(Icons.menu_book_outlined,
+                color: Color(0xFF6D28D9)),
+            title: const Text('Twelve Steps and Twelve Traditions'),
+            subtitle: const Text(
+                'The "12 & 12" — step and tradition chapters with bookmarks'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const LiteratureScreen(initialTab: 1)),
+            ),
           ),
 
           const Divider(),
@@ -219,6 +261,25 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _handleExcelExport(WidgetRef ref) async {
     final amends = await ref.read(amendsRepositoryProvider).watchAll().first;
     await ExportService.exportToExcel(amends);
+  }
+
+  Future<void> _handleJournalPdfExport(
+      BuildContext context, WidgetRef ref) async {
+    final entries =
+        await ref.read(journalRepositoryProvider).getAllForExport();
+
+    if (entries.isEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your journal is empty. Write some entries in the Journal tab first.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await ExportService.generateJournalPdf(entries);
   }
 
   // ── Data wipe ────────────────────────────────────────────────────────────
