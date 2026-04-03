@@ -6,9 +6,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// iOS: [KeychainAccessibility.first_unlock] maps to
 /// `kSecAttrAccessibleAfterFirstUnlock`, so values remain available for
 /// background work and notifications after the first device unlock.
-final FlutterSecureStorage appSecureStorage = FlutterSecureStorage(
-  aOptions: const AndroidOptions(encryptedSharedPreferences: true),
-  iOptions: const IOSOptions(
+const FlutterSecureStorage appSecureStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  iOptions: IOSOptions(
     accessibility: KeychainAccessibility.first_unlock,
   ),
 );
