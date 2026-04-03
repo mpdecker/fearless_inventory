@@ -40,11 +40,15 @@ class ActiveLocation {
   /// Whether this came from device GPS (vs geocoded custom query).
   final bool fromGps;
 
+  /// iOS 14+ approximate location; distances may be less accurate.
+  final bool reducedLocationAccuracy;
+
   const ActiveLocation({
     required this.latitude,
     required this.longitude,
     required this.label,
     required this.fromGps,
+    this.reducedLocationAccuracy = false,
   });
 }
 
@@ -86,7 +90,7 @@ final locationQueryProvider = StateProvider<String>((ref) => '');
 final geocodedLocationProvider = FutureProvider<GeocodedLocation?>((ref) async {
   final query = ref.watch(locationQueryProvider).trim();
   if (query.isEmpty) return null;
-  return _geocodeNominatim(query);
+  return geocodeNominatim(query);
 });
 
 /// Selected distance radius in miles. `null` = show all distances.
@@ -115,17 +119,26 @@ final activeLocationProvider = FutureProvider<ActiveLocation?>((ref) async {
       longitude: geo.longitude,
       label: label.isNotEmpty ? label : geo.query,
       fromGps: false,
+      reducedLocationAccuracy: false,
     );
   }
 
   // GPS fallback
   final pos = await ref.watch(userLocationProvider.future);
   if (pos == null) return null;
+  LocationAccuracyStatus accuracyStatus = LocationAccuracyStatus.unknown;
+  try {
+    accuracyStatus = await Geolocator.getLocationAccuracy();
+  } catch (_) {
+    // Older platforms / unsupported — treat as unknown (no banner note).
+  }
+  final reduced = accuracyStatus == LocationAccuracyStatus.reduced;
   return ActiveLocation(
     latitude: pos.latitude,
     longitude: pos.longitude,
     label: 'Your location',
     fromGps: true,
+    reducedLocationAccuracy: reduced,
   );
 });
 
@@ -133,7 +146,15 @@ final activeLocationProvider = FutureProvider<ActiveLocation?>((ref) async {
 // Geocoding (Nominatim / OpenStreetMap — free, no API key)
 // ─────────────────────────────────────────────────────────────────────────────
 
-Future<GeocodedLocation?> _geocodeNominatim(String query) async {
+/// Geocodes [query] (zip or place name) via Nominatim over HTTPS.
+///
+/// Pass [httpClient] in tests; otherwise a short-lived [http.Client] is used.
+Future<GeocodedLocation?> geocodeNominatim(
+  String query, {
+  http.Client? httpClient,
+}) async {
+  final ownClient = httpClient == null;
+  final client = httpClient ?? http.Client();
   try {
     final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
       'q': query,
@@ -142,10 +163,15 @@ Future<GeocodedLocation?> _geocodeNominatim(String query) async {
       'countrycodes': 'us', // Bias results to the US
       'addressdetails': '0',
     });
-    final resp = await http.get(uri, headers: {
-      'User-Agent': 'FearlessInventory/1.0 (AA Meeting Locator)',
-      'Accept-Language': 'en-US,en',
-    }).timeout(const Duration(seconds: 8));
+    final resp = await client
+        .get(
+          uri,
+          headers: {
+            'User-Agent': 'FearlessInventory/1.0 (AA Meeting Locator)',
+            'Accept-Language': 'en-US,en',
+          },
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (resp.statusCode != 200) return null;
 
@@ -161,6 +187,10 @@ Future<GeocodedLocation?> _geocodeNominatim(String query) async {
     );
   } catch (_) {
     return null;
+  } finally {
+    if (ownClient) {
+      client.close();
+    }
   }
 }
 

@@ -664,6 +664,17 @@ class _ActiveLocationBanner extends StatelessWidget {
                   style: TextStyle(
                       color: Colors.blue.shade600, fontSize: 11),
                 ),
+                if (active.fromGps && active.reducedLocationAccuracy) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Approximate location is on — meeting distances may be less accurate. '
+                    'You can enable Precise Location in Settings or search by zip or city.',
+                    style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontSize: 10,
+                        height: 1.25),
+                  ),
+                ],
               ],
             ),
           ),
