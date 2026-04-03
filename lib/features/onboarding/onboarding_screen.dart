@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/quotes/recovery_quotes.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/services/onboarding_service.dart';
 import '../home/home_screen.dart';
 
@@ -119,6 +120,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().processPendingLaunchNotification();
+    });
   }
 
   @override

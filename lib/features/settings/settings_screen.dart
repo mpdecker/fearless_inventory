@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/services/onboarding_service.dart';
 import '../../core/providers/sobriety_provider.dart';
 import '../../data/services/export_service.dart';
@@ -116,6 +118,11 @@ class SettingsScreen extends ConsumerWidget {
 
           // ── Sobriety date ──────────────────────────────────────────────
           _SobrietyDateTile(),
+
+          const Divider(),
+          _buildSectionHeader('Notifications'),
+
+          const _NotificationsReminderTile(),
 
           const Divider(),
           _buildSectionHeader('Privacy'),
@@ -438,5 +445,120 @@ class _SobrietyDateTile extends ConsumerWidget {
     if (confirmed == true) {
       await ref.read(sobrietyDateProvider.notifier).clearDate();
     }
+  }
+}
+
+// ── Notification reminder (Settings) ─────────────────────────────────────────
+
+/// Shows OS notification status and a one-line path to Settings when alerts
+/// are denied. Does not request permission (avoids repeated prompts).
+class _NotificationsReminderTile extends StatefulWidget {
+  const _NotificationsReminderTile();
+
+  @override
+  State<_NotificationsReminderTile> createState() =>
+      _NotificationsReminderTileState();
+}
+
+class _NotificationsReminderTileState extends State<_NotificationsReminderTile>
+    with WidgetsBindingObserver {
+  late Future<PermissionStatus> _statusFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _statusFuture = Permission.notification.status;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      setState(() {
+        _statusFuture = Permission.notification.status;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = MaterialLocalizations.of(context);
+    final dailyT = loc.formatTimeOfDay(
+      const TimeOfDay(
+        hour: NotificationService.defaultDailyReviewHour,
+        minute: NotificationService.defaultDailyReviewMinute,
+      ),
+      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    );
+    final bedT = loc.formatTimeOfDay(
+      const TimeOfDay(
+        hour: NotificationService.defaultBedtimeHour,
+        minute: NotificationService.defaultBedtimeMinute,
+      ),
+      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    );
+    final scheduleSubtitle =
+        'Daily review at $dailyT · Bedtime meditation at $bedT';
+
+    return FutureBuilder<PermissionStatus>(
+      future: _statusFuture,
+      builder: (context, snapshot) {
+        final status = snapshot.data;
+        final denied = status == PermissionStatus.denied ||
+            status == PermissionStatus.permanentlyDenied ||
+            status == PermissionStatus.restricted;
+
+        if (status == null) {
+          return const ListTile(
+            leading: Icon(Icons.notifications_outlined),
+            title: Text('Reminder alerts'),
+            subtitle: Text('Checking…'),
+          );
+        }
+
+        if (denied) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.notifications_off_outlined,
+                    color: Colors.orangeAccent),
+                title: const Text('Reminder alerts'),
+                subtitle: Text(
+                  'Notifications are off. Daily review and bedtime '
+                  'reminders will not appear. Turn them on in system Settings '
+                  'if you want them — we will not ask again here.',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: TextButton.icon(
+                  onPressed: openAppSettings,
+                  icon: const Icon(Icons.settings_outlined, size: 20),
+                  label: const Text('Open system settings'),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return ListTile(
+          leading:
+              const Icon(Icons.notifications_active, color: Colors.tealAccent),
+          title: const Text('Reminder alerts'),
+          subtitle: Text(scheduleSubtitle),
+        );
+      },
+    );
   }
 }

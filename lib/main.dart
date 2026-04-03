@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/theme/app_theme.dart';
 import 'core/database/database.dart';
+import 'core/navigation/notification_navigation.dart';
+import 'core/navigation/root_navigator.dart';
 import 'core/services/key_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/onboarding_service.dart';
+import 'core/theme/app_theme.dart';
 import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
@@ -21,7 +23,9 @@ void main() async {
 
   // ── Notification service ─────────────────────────────────────────────────
   final notificationService = NotificationService();
-  await notificationService.init();
+  await notificationService.init(
+    onNotificationResponse: navigateFromNotificationTap,
+  );
   await notificationService.scheduleDailyReviewReminder(
     hour: NotificationService.defaultDailyReviewHour,
     minute: NotificationService.defaultDailyReviewMinute,
@@ -45,17 +49,36 @@ void main() async {
   );
 }
 
-class FearlessInventoryApp extends ConsumerWidget {
+class FearlessInventoryApp extends ConsumerStatefulWidget {
   final bool showOnboarding;
   const FearlessInventoryApp({super.key, required this.showOnboarding});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FearlessInventoryApp> createState() =>
+      _FearlessInventoryAppState();
+}
+
+class _FearlessInventoryAppState extends ConsumerState<FearlessInventoryApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!widget.showOnboarding) {
+        NotificationService().processPendingLaunchNotification();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       title: 'Fearless Inventory',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
-      home: showOnboarding ? const OnboardingScreen() : const HomeScreen(),
+      home: widget.showOnboarding
+          ? const OnboardingScreen()
+          : const HomeScreen(),
     );
   }
 }
