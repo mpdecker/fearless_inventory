@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -15,9 +15,10 @@ dependencies:
   hooks_riverpod: ^2.4.9
   flutter_hooks: ^0.20.4
 
-  # Database (Drift with SQLite/SQLCipher)
+  # Database (Drift + sqlite3 with SQLite3MultipleCiphers via build hook — replaces
+  # sqlite3_flutter_libs / sqlcipher_flutter_libs for package:sqlite3 3.x)
   drift: ^2.14.1
-  sqlite3_flutter_libs: ^0.5.18
+  sqlite3: ^3.2.0
   path_provider: ^2.1.1
   path: ^1.8.3
 
@@ -50,8 +51,15 @@ dependencies:
   timezone: ^0.9.2
   permission_handler: ^11.3.1
 
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc
+
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # Code Generation Tools
