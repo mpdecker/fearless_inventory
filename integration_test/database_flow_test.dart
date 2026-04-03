@@ -14,6 +14,32 @@ import 'package:fearless_inventory/core/services/key_service.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets(
+      'after DB file removed, stale encryption key is cleared and replaced',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+
+    final dir = await getApplicationDocumentsDirectory();
+    final prodDb = File(
+      p.join(dir.path, KeyService.productionDatabaseFileName),
+    );
+    if (!await prodDb.exists()) {
+      await prodDb.create(recursive: true);
+    }
+
+    final keyBefore = await KeyService.getOrCreateDatabaseKey();
+    expect(keyBefore, hasLength(64));
+
+    if (await prodDb.exists()) {
+      await prodDb.delete();
+    }
+    await KeyService.clearStaleEncryptionKeyIfDatabaseMissing(prodDb);
+
+    final keyAfter = await KeyService.getOrCreateDatabaseKey();
+    expect(keyAfter, isNot(keyBefore));
+    expect(keyAfter, hasLength(64));
+  });
+
   testWidgets('KeyService key is stable; encrypted DB persists resentment',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));

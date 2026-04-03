@@ -3,8 +3,10 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/amends_type.dart';
+import '../services/key_service.dart';
 
 part 'database.g.dart';
 
@@ -494,6 +496,11 @@ class LiteratureBookmarks extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
 
+  /// Same schema and encryption as production, backed by [databaseFile] (e.g. a
+  /// temp file in tests).
+  AppDatabase.forTesting(File databaseFile, String encryptionKey)
+      : super(_openConnectionAt(databaseFile, encryptionKey));
+
   @override
   int get schemaVersion => 12;
 
@@ -572,6 +579,8 @@ class AppDatabase extends _$AppDatabase {
         await delete(resentments).go();
         await delete(defects).go();
         await delete(dailyReviews).go();
+        await delete(step5Completions).go();
+        await delete(meditationSessions).go();
         await delete(stepTwelveEvents).go();
         await delete(attendanceLogs).go();
         await delete(meetings).go();
@@ -590,16 +599,34 @@ class AppDatabase extends _$AppDatabase {
 // CONNECTION FACTORY
 // ─────────────────────────────────────────────
 
+void _configureEncryptedConnection(Database db, String encryptionKey) {
+  // SQLite3MultipleCiphers (bundled via pubspec `hooks` → sqlite3: source: sqlite3mc).
+  // SQLCipher-compatible settings for existing installs that used PRAGMA key + legacy.
+  db.execute("PRAGMA key = '$encryptionKey';");
+  db.execute('PRAGMA cipher = "sqlcipher";');
+  db.execute('PRAGMA legacy = 4;');
+  db.execute('PRAGMA foreign_keys = ON;');
+}
+
+QueryExecutor _openConnectionAt(File file, String encryptionKey) {
+  return LazyDatabase(() async {
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) => _configureEncryptedConnection(db, encryptionKey),
+    );
+  });
+}
+
 QueryExecutor _openConnection(String encryptionKey) {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'fearless_inventory.db'));
-    return NativeDatabase.createInBackground(file, setup: (db) {
-      // Use the per-device key rather than a hard-coded value
-      db.execute("PRAGMA key = '$encryptionKey';");
-      db.execute('PRAGMA cipher = "sqlcipher";');
-      db.execute('PRAGMA legacy = 4;');
-    });
+    final file = File(
+      p.join(dbFolder.path, KeyService.productionDatabaseFileName),
+    );
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) => _configureEncryptedConnection(db, encryptionKey),
+    );
   });
 }
 

@@ -12,6 +12,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ── Per-device database encryption key ──────────────────────────────────
+  final dbFile = await KeyService.productionDatabaseFile();
+  await KeyService.clearStaleEncryptionKeyIfDatabaseMissing(dbFile);
   final dbKey = await KeyService.getOrCreateDatabaseKey();
 
   // ── First-run onboarding flag ────────────────────────────────────────────
