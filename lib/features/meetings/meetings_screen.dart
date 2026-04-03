@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -13,6 +15,7 @@ import 'services/meeting_sync_service.dart';
 import 'services/meeting_calendar_service.dart';
 import 'services/meeting_notification_service.dart';
 import 'services/location_service.dart';
+import 'map_launch_uri.dart';
 import 'providers/meetings_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3002,21 +3005,33 @@ Future<void> _launchPhone(String phone) async {
 }
 
 Future<void> _openMaps(Meeting meeting) async {
-  // Prefer coordinate-based link for accuracy
+  // Prefer coordinate-based link for accuracy (geo: works on Android; iOS uses Apple Maps).
   if (meeting.latitude != null && meeting.longitude != null) {
-    final uri = Uri.parse(
-        'geo:${meeting.latitude},${meeting.longitude}?q=${meeting.latitude},${meeting.longitude}(${Uri.encodeComponent(meeting.name)})');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final lat = meeting.latitude!;
+    final lng = meeting.longitude!;
+    final Uri coordUri = Platform.isIOS
+        ? appleMapsUriForCoordinates(
+            latitude: lat,
+            longitude: lng,
+            placeName: meeting.name,
+          )
+        : Uri.parse(
+            'geo:$lat,$lng?q=$lat,$lng(${Uri.encodeComponent(meeting.name)})',
+          );
+    if (await canLaunchUrl(coordUri)) {
+      await launchUrl(coordUri, mode: LaunchMode.externalApplication);
       return;
     }
   }
-  // Fallback: text search
-  final q = Uri.encodeComponent(
-      meeting.address ?? '${meeting.locationName}, ${meeting.city}');
-  final uri = Uri.parse('https://maps.google.com/?q=$q');
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  final query =
+      meeting.address ?? '${meeting.locationName}, ${meeting.city}';
+  final Uri fallbackUri = Platform.isIOS
+      ? appleMapsUriForQuery(query)
+      : Uri.parse(
+          'https://maps.google.com/?q=${Uri.encodeComponent(query)}',
+        );
+  if (await canLaunchUrl(fallbackUri)) {
+    await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
   }
 }
 

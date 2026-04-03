@@ -71,6 +71,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>zoomus</string>
+		<string>https</string>
+		<string>maps</string>
+	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Fearless Inventory uses your location to find recovery meetings near you.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
