@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'adaptive_page_route.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../services/notification_service.dart';
@@ -15,16 +15,12 @@ void navigateFromNotificationTap(NotificationResponse response) {
   switch (response.id) {
     case NotificationService.idDailyReview:
       nav.push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => const DailyReviewHubScreen(),
-        ),
+        adaptivePageRoute<void>((_) => const DailyReviewHubScreen()),
       );
       break;
     case NotificationService.idBedtimeMeditation:
       nav.push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => const BedtimeMeditationScreen(),
-        ),
+        adaptivePageRoute<void>((_) => const BedtimeMeditationScreen()),
       );
       break;
     default:

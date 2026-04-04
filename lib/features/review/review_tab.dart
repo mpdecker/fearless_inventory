@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/navigation/adaptive_page_route.dart';
 import 'daily_review_screen.dart';
 import 'review_history_screen.dart';
 
@@ -17,7 +19,7 @@ class ReviewTab extends StatelessWidget {
             label: const Text("Complete Daily 10th Step"),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const DailyReviewScreen()),
+              adaptivePageRoute((_) => const DailyReviewScreen()),
             ),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),

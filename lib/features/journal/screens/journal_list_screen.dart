@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
 import '../../../core/database/database.dart';
+import '../../../core/navigation/adaptive_page_route.dart';
 import '../../../data/repositories/journal_repository.dart';
 import '../data/step_tradition_content.dart';
 import '../providers/journal_providers.dart';
@@ -112,7 +113,7 @@ class JournalListScreen extends HookConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const JournalEntryForm()),
+          adaptivePageRoute((_) => const JournalEntryForm()),
         ),
         child: const Icon(Icons.edit_outlined),
       ),
@@ -203,8 +204,8 @@ class JournalListScreen extends HookConsumerWidget {
                       : null;
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => JournalEntryForm(
+                adaptivePageRoute(
+                  (_) => JournalEntryForm(
                     entry: je,
                     subject: subject,
                   ),

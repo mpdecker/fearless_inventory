@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/database/database.dart';
 import 'core/navigation/notification_navigation.dart';
@@ -12,6 +13,14 @@ import 'features/onboarding/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF12121F),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
 
   // ── Per-device database encryption key ──────────────────────────────────
   final dbFile = await KeyService.productionDatabaseFile();
@@ -76,6 +85,9 @@ class _FearlessInventoryAppState extends ConsumerState<FearlessInventoryApp> {
       title: 'Fearless Inventory',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
+      darkTheme: AppTheme.dark(),
+      // Locked dark palette: iOS/Android system appearance does not override.
+      themeMode: ThemeMode.dark,
       home: widget.showOnboarding
           ? const OnboardingScreen()
           : const HomeScreen(),

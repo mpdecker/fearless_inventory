@@ -6,6 +6,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
+import '../../core/widgets/app_dialogs.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../data/repositories/step12_repository.dart';
 import '../../data/repositories/service_commitments_repository.dart';
 import '../../data/repositories/sponsee_repository.dart';
@@ -787,7 +789,7 @@ class _AddEditEventSheetState extends ConsumerState<_AddEditEventSheet> {
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () async {
-                final picked = await showDatePicker(
+                final picked = await showAdaptiveAppDatePicker(
                   context: context,
                   initialDate: _selectedDate,
                   firstDate: DateTime(2020),
@@ -813,7 +815,7 @@ class _AddEditEventSheetState extends ConsumerState<_AddEditEventSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final picked = await showTimePicker(
+                      final picked = await showAdaptiveAppTimePicker(
                         context: context,
                         initialTime:
                             _startTime ?? TimeOfDay.now(),
@@ -836,7 +838,7 @@ class _AddEditEventSheetState extends ConsumerState<_AddEditEventSheet> {
                     onPressed: _startTime == null
                         ? null
                         : () async {
-                            final picked = await showTimePicker(
+                            final picked = await showAdaptiveAppTimePicker(
                               context: context,
                               initialTime: _endTime ??
                                   TimeOfDay(
@@ -1086,8 +1088,8 @@ class _SponseeCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => SponseeDetailScreen(sponseeId: sponsee.id),
+          adaptivePageRoute(
+            (_) => SponseeDetailScreen(sponseeId: sponsee.id),
           ),
         ),
         child: Padding(
@@ -1229,7 +1231,7 @@ class _AddSponseeSheetState extends ConsumerState<AddSponseeSheet> {
       bool futureOk = false}) async {
     final now = DateTime.now();
     final last = futureOk ? DateTime(now.year + 10) : now;
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveAppDatePicker(
       context: context,
       initialDate: initial ?? now,
       firstDate: DateTime(1950),
@@ -2511,7 +2513,7 @@ class _AddCommitmentSheetState
             _FormLabel('Start Date'),
             OutlinedButton.icon(
               onPressed: () async {
-                final d = await showDatePicker(
+                final d = await showAdaptiveAppDatePicker(
                   context: context,
                   initialDate: _startDate,
                   firstDate: DateTime(2020),
@@ -2539,7 +2541,7 @@ class _AddCommitmentSheetState
                   ),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    final d = await showDatePicker(
+                    final d = await showAdaptiveAppDatePicker(
                       context: context,
                       initialDate: _endDate ??
                           _startDate.add(const Duration(days: 90)),
@@ -2601,7 +2603,7 @@ class _AddCommitmentSheetState
                   const SizedBox(width: 12),
                   OutlinedButton(
                     onPressed: () async {
-                      final t = await showTimePicker(
+                      final t = await showAdaptiveAppTimePicker(
                         context: context,
                         initialTime:
                             _recurringTime ?? TimeOfDay.now(),
@@ -2938,7 +2940,7 @@ class _AddStepCallSheetState extends ConsumerState<AddStepCallSheet> {
                   flex: 3,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final d = await showDatePicker(
+                      final d = await showAdaptiveAppDatePicker(
                         context: context,
                         initialDate: _occurredAt,
                         firstDate: _isScheduledMode
@@ -2960,7 +2962,7 @@ class _AddStepCallSheetState extends ConsumerState<AddStepCallSheet> {
                   flex: 2,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final t = await showTimePicker(
+                      final t = await showAdaptiveAppTimePicker(
                         context: context,
                         initialTime: _time ?? TimeOfDay.now(),
                       );

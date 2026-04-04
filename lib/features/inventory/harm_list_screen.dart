@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../core/database/database.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import 'providers/inventory_providers.dart';
 import 'harm_entry_screen.dart';
 import '../amends/amends_entry_screen.dart';
@@ -45,13 +45,15 @@ class HarmListScreen extends ConsumerWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => AmendsEntryScreen(fromHarm: item)),
+                          adaptivePageRoute(
+                              (_) => AmendsEntryScreen(fromHarm: item)),
                         );
                       },
                     ),
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => HarmEntryScreen(existing: item)),
+                      adaptivePageRoute(
+                          (_) => HarmEntryScreen(existing: item)),
                     ),
                   );
                 },
@@ -64,7 +66,7 @@ class HarmListScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const HarmEntryScreen()),
+          adaptivePageRoute((_) => const HarmEntryScreen()),
         ),
         child: const Icon(Icons.add),
       ),

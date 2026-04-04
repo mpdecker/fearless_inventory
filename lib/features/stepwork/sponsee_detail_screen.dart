@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../core/services/sobriety_service.dart';
 import '../../data/repositories/sponsee_repository.dart';
 import '../../data/repositories/service_commitments_repository.dart';
@@ -1268,7 +1269,7 @@ class _AddCheckInSheetState extends ConsumerState<_AddCheckInSheet> {
                     flex: 3,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final d = await showDatePicker(
+                        final d = await showAdaptiveAppDatePicker(
                           context: context,
                           initialDate: _scheduledAt,
                           firstDate: DateTime.now(),
@@ -1287,7 +1288,7 @@ class _AddCheckInSheetState extends ConsumerState<_AddCheckInSheet> {
                     flex: 2,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final t = await showTimePicker(
+                        final t = await showAdaptiveAppTimePicker(
                           context: context,
                           initialTime: _time,
                         );

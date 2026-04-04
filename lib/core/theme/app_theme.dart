@@ -31,9 +31,10 @@ class AppTheme {
         foregroundColor: _onSurface,
         elevation: 0,
         centerTitle: false,
+        // Omit a fixed fontSize so toolbar titles respect system text scaling
+        // (Dynamic Type on iOS, font scale on Android).
         titleTextStyle: TextStyle(
           color: _onSurface,
-          fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
         iconTheme: IconThemeData(color: _onSurface),

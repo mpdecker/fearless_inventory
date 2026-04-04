@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../../core/navigation/adaptive_page_route.dart';
+import '../../core/widgets/app_dialogs.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../core/services/notification_service.dart';
@@ -103,8 +106,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text(
                 'Alcoholics Anonymous — chapter navigator with bookmarks'),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => const LiteratureScreen(initialTab: 0)),
+              adaptivePageRoute((_) => const LiteratureScreen(initialTab: 0)),
             ),
           ),
 
@@ -116,8 +118,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text(
                 'The "12 & 12" — step and tradition chapters with bookmarks'),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => const LiteratureScreen(initialTab: 1)),
+              adaptivePageRoute((_) => const LiteratureScreen(initialTab: 1)),
             ),
           ),
 
@@ -157,8 +158,7 @@ class SettingsScreen extends ConsumerWidget {
               await OnboardingService.reset();
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                      builder: (_) => const OnboardingScreen()),
+                  adaptivePageRoute((_) => const OnboardingScreen()),
                   (_) => false,
                 );
               }
@@ -408,23 +408,12 @@ class _SobrietyDateTile extends ConsumerWidget {
   Future<void> _pickDate(
       BuildContext context, WidgetRef ref, DateTime? current) async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveAppDatePicker(
       context: context,
       initialDate: current ?? now,
       firstDate: DateTime(1950),
       lastDate: now,
       helpText: 'Select your sobriety start date',
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Colors.teal,
-            onPrimary: Colors.white,
-            surface: Colors.white,
-            onSurface: Colors.black87,
-          ),
-        ),
-        child: child!,
-      ),
     );
 
     if (picked != null) {

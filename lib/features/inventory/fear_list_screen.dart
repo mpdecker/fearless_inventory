@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../data/repositories/fear_repository.dart';
 import 'providers/inventory_providers.dart'; // Import the new dedicated provider file
 import 'fear_entry_screen.dart';
@@ -42,8 +43,8 @@ class FearListScreen extends ConsumerWidget {
                     ),
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => FearEntryScreen(existing: item),
+                      adaptivePageRoute(
+                        (_) => FearEntryScreen(existing: item),
                       ),
                     ),
                   );
@@ -57,7 +58,7 @@ class FearListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const FearEntryScreen()),
+          adaptivePageRoute((_) => const FearEntryScreen()),
         ),
         child: const Icon(Icons.add),
       ),

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../core/database/database.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../data/repositories/meetings_repository.dart';
 import 'adapters/meeting_source_adapter.dart';
 import 'services/meeting_sync_service.dart';
@@ -2357,7 +2358,7 @@ class _LogAttendanceSheet extends HookConsumerWidget {
             // ── Date/time picker ────────────────────────────────────
             OutlinedButton.icon(
               onPressed: () async {
-                final d = await showDatePicker(
+                final d = await showAdaptiveAppDatePicker(
                   context: context,
                   initialDate: attendedAt.value,
                   firstDate: DateTime(2020),

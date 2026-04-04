@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
 import '../../core/database/database.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../data/repositories/amends_repository.dart';
 import '../../core/models/amends_type.dart';
 
@@ -261,7 +262,7 @@ class _DatePickerTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: () async {
         final now = DateTime.now();
-        final picked = await showDatePicker(
+        final picked = await showAdaptiveAppDatePicker(
           context: context,
           initialDate: selectedDate ?? now,
           firstDate: now.subtract(const Duration(days: 365)),

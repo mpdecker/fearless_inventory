@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../core/database/database.dart';
+import '../../../core/navigation/adaptive_page_route.dart';
 import '../../../core/widgets/quote_card.dart';
 import '../../../data/repositories/journal_repository.dart';
 import '../data/step_tradition_content.dart';
@@ -209,8 +210,8 @@ class StepJournalScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => JournalEntryForm(subject: content),
+          adaptivePageRoute(
+            (_) => JournalEntryForm(subject: content),
           ),
         ),
         icon: const Icon(Icons.edit_outlined),
@@ -306,8 +307,8 @@ class _PromptCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => JournalEntryForm(
+          adaptivePageRoute(
+            (_) => JournalEntryForm(
               subject: content,
               initialPrompt: prompt,
             ),
@@ -422,8 +423,8 @@ class _EntriesSection extends ConsumerWidget {
                     entry: entry,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => JournalEntryForm(
+                      adaptivePageRoute(
+                        (_) => JournalEntryForm(
                           subject: content,
                           entry: entry,
                         ),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../core/navigation/adaptive_page_route.dart';
+import '../../core/widgets/app_dialogs.dart';
+
 // Feature Imports
 import '../review/daily_review_hub_screen.dart';
 import '../../core/quotes/recovery_quotes.dart';
@@ -74,7 +77,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Recovery Companion',
           style: TextStyle(fontWeight: FontWeight.bold)),
@@ -83,7 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen())
+              adaptivePageRoute((_) => const SettingsScreen()),
             ),
           )
         ],
@@ -286,8 +288,8 @@ class _HomeDashboardView extends StatelessWidget {
           icon: Icons.wb_sunny_outlined,
           color: Colors.orange.shade800,
           onTap: () => Navigator.push(
-            context, 
-            MaterialPageRoute(builder: (_) => Step11MeditationScreen())
+            context,
+            adaptivePageRoute((_) => Step11MeditationScreen()),
           ),
         ),
         _buildActionCard(
@@ -298,7 +300,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.indigo.shade800,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const DailyReviewHubScreen()),
+            adaptivePageRoute((_) => const DailyReviewHubScreen()),
           ),
         ),
         _buildActionCard(
@@ -309,7 +311,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.deepPurple.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BedtimeMeditationScreen()),
+            adaptivePageRoute((_) => const BedtimeMeditationScreen()),
           ),
         ),
 
@@ -325,7 +327,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.redAccent.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => Step4LandingScreen())
+            adaptivePageRoute((_) => Step4LandingScreen()),
           ),
         ),
         _buildActionCard(
@@ -336,7 +338,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.purple.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const DefectManagementScreen())
+            adaptivePageRoute((_) => const DefectManagementScreen()),
           ),
         ),
         _buildActionCard(
@@ -347,7 +349,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.teal.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ShortcomingDashboardScreen())
+            adaptivePageRoute((_) => const ShortcomingDashboardScreen()),
           ),
         ),
         _buildActionCard(
@@ -358,7 +360,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.blueGrey.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AmendsListScreen()),
+            adaptivePageRoute((_) => const AmendsListScreen()),
           ),
         ),
       ],
@@ -366,15 +368,22 @@ class _HomeDashboardView extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Text(title, 
-        style: TextStyle(
-          fontWeight: FontWeight.bold, 
-          color: Colors.grey.shade700, 
-          letterSpacing: 1.1, 
-          fontSize: 12
-        )),
+    return Builder(
+      builder: (context) {
+        final muted = Theme.of(context).colorScheme.onSurface.withOpacity(0.65);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: muted,
+              letterSpacing: 1.1,
+              fontSize: 12,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -386,28 +395,38 @@ class _HomeDashboardView extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1), 
-            borderRadius: BorderRadius.circular(12)
+    return Builder(
+      builder: (context) {
+        final outline = Theme.of(context).colorScheme.outline.withOpacity(0.35);
+        final subtitleColor =
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.72);
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: outline),
           ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      ),
+          child: ListTile(
+            onTap: onTap,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            title: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            subtitle: Text(subtitle,
+                style: TextStyle(color: subtitleColor, fontSize: 13)),
+            trailing: Icon(Icons.chevron_right, color: subtitleColor),
+          ),
+        );
+      },
     );
   }
 }
@@ -468,20 +487,21 @@ class _SobrietyCard extends ConsumerWidget {
   // ── No date set yet ──────────────────────────────────────────────────────
 
   Widget _buildUnset(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final teal = cs.secondary;
     return GestureDetector(
       onTap: () => _pickDate(context, ref, initial: null),
       child: Container(
         margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: Colors.teal.shade50,
+          color: teal.withOpacity(0.14),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.teal.shade200, width: 1.5),
+          border: Border.all(color: teal.withOpacity(0.45), width: 1.5),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
-                color: Colors.teal.shade700, size: 28),
+            Icon(Icons.calendar_today_outlined, color: teal, size: 28),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -490,7 +510,7 @@ class _SobrietyCard extends ConsumerWidget {
                   Text(
                     'Set your sobriety date',
                     style: TextStyle(
-                      color: Colors.teal.shade800,
+                      color: cs.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
@@ -499,12 +519,14 @@ class _SobrietyCard extends ConsumerWidget {
                   Text(
                     'Tap to enter the date you got sober',
                     style: TextStyle(
-                        color: Colors.teal.shade600, fontSize: 13),
+                      color: cs.onSurface.withOpacity(0.72),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.teal.shade400),
+            Icon(Icons.chevron_right, color: teal.withOpacity(0.8)),
           ],
         ),
       ),
@@ -621,7 +643,7 @@ class _SobrietyCard extends ConsumerWidget {
   Future<void> _pickDate(
       BuildContext context, WidgetRef ref, {required DateTime? initial}) async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveAppDatePicker(
       context: context,
       initialDate: initial ?? now.subtract(const Duration(days: 1)),
       firstDate: DateTime(1950),
@@ -629,16 +651,6 @@ class _SobrietyCard extends ConsumerWidget {
       helpText: 'Select your sobriety date',
       confirmText: 'Set date',
       fieldLabelText: 'Sobriety date',
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: Colors.teal.shade700,
-            onPrimary: Colors.white,
-            surface: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
     );
 
     if (picked != null) {

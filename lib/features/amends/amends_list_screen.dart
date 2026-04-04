@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/database/database.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import 'providers/amends_providers.dart';
@@ -34,7 +35,7 @@ class AmendsListScreen extends ConsumerWidget {
           backgroundColor: Colors.deepOrange.shade800,
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AmendsEntryScreen()),
+            adaptivePageRoute((_) => const AmendsEntryScreen()),
           ),
           child: const Icon(Icons.add),
         ),
@@ -138,8 +139,8 @@ class _AmendsFilteredList extends ConsumerWidget {
                   item.datePlanned != null,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => AmendsEntryScreen(editAmends: item)),
+                adaptivePageRoute(
+                    (_) => AmendsEntryScreen(editAmends: item)),
               ),
             );
           },

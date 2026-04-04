@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/navigation/adaptive_page_route.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
@@ -89,7 +91,7 @@ class DailyReviewScreen extends HookConsumerWidget {
                   Navigator.pop(sheetContext);
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => const DefectDiscoveryWizard()),
+                    adaptivePageRoute((_) => const DefectDiscoveryWizard()),
                   );
                 },
               ),
@@ -110,7 +112,7 @@ class DailyReviewScreen extends HookConsumerWidget {
                   Navigator.pop(sheetContext);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AmendsEntryScreen()),
+                    adaptivePageRoute((_) => const AmendsEntryScreen()),
                   );
                 },
               ),

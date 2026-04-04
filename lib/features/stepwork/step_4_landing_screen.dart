@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import '../../data/repositories/step5_repository.dart';
@@ -90,7 +91,7 @@ class Step4LandingScreen extends ConsumerWidget {
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => screen)),
+            context, adaptivePageRoute((_) => screen)),
       ),
     );
   }
@@ -167,8 +168,7 @@ class _Step5Card extends StatelessWidget {
                 ),
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const Step5CeremonyScreen()),
+                  adaptivePageRoute((_) => const Step5CeremonyScreen()),
                 ),
                 child: Text(
                   hasCompleted ? 'Begin Again' : 'Begin Step 5',

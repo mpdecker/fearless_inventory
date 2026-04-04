@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/onboarding_service.dart';
@@ -118,7 +120,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await OnboardingService.markComplete();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      adaptivePageRoute((_) => const HomeScreen()),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().processPendingLaunchNotification();

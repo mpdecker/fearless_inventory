@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../core/database/database.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../data/repositories/resentment_repository.dart';
 import 'providers/inventory_providers.dart';
 import 'resentment_entry_screen.dart';
@@ -44,8 +44,8 @@ class ResentmentListScreen extends ConsumerWidget {
                     ),
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => ResentmentEntryScreen(existing: item),
+                      adaptivePageRoute(
+                        (_) => ResentmentEntryScreen(existing: item),
                       ),
                     ),
                   );
@@ -57,7 +57,7 @@ class ResentmentListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ResentmentEntryScreen()),
+          adaptivePageRoute((_) => const ResentmentEntryScreen()),
         ),
         child: const Icon(Icons.add),
       ),

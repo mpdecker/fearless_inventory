@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../core/navigation/adaptive_page_route.dart';
 import '../data/step_tradition_content.dart';
 import '../providers/journal_providers.dart';
 import 'journal_list_screen.dart';
@@ -54,8 +55,7 @@ class _JournalTabState extends ConsumerState<JournalTab>
                 tooltip: 'All entries',
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const JournalListScreen()),
+                  adaptivePageRoute((_) => const JournalListScreen()),
                 ),
               ),
               if (totalCount > 0)
@@ -163,8 +163,8 @@ class _SubjectCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => StepJournalScreen(content: content),
+          adaptivePageRoute(
+            (_) => StepJournalScreen(content: content),
           ),
         ),
         child: Container(
