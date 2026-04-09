@@ -1,6 +1,7 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart';
 import '../../core/database/database.dart';
+import '../../features/review/review_type.dart';
 
 final reviewRepositoryProvider =
     Provider((ref) => ReviewRepository(ref.read(databaseProvider)));
@@ -32,6 +33,23 @@ class ReviewRepository {
             .where((r) =>
                 !r.date.isBefore(startOfDay) && r.date.isBefore(endOfDay))
             .toList());
+  }
+
+  /// Fetches all reviews in the last [days] days, client-side filtered.
+  Future<List<DailyReview>> getRecentReviews(int days) async {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    final rows = await _db.select(_db.dailyReviews).get();
+    return rows.where((r) => r.createdAt.isAfter(cutoff)).toList();
+  }
+
+  /// Fetches reviews in the last [days] days for a specific [type].
+  Future<List<DailyReview>> getRecentByType(ReviewType type, int days) async {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    final rows = await _db.select(_db.dailyReviews).get();
+    return rows
+        .where((r) =>
+            r.reviewType == type.dbValue && r.createdAt.isAfter(cutoff))
+        .toList();
   }
 
   Future<int> insertReview(DailyReviewsCompanion entry) =>

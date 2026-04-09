@@ -19,7 +19,12 @@ class RecoveryInsightsScreen extends ConsumerWidget {
     final journalAsync      = ref.watch(journalInsightsProvider);
     final serviceAsync      = ref.watch(serviceInsightsProvider);
     final disturberAsync    = ref.watch(disturberBreakdownProvider);
+    final step10TypeAsync   = ref.watch(step10TypeInsightsProvider);
     final amendsAsync       = ref.watch(amendsJourneyProvider);
+    final sponsorCallAsync  = ref.watch(sponsorCallInsightsProvider);
+    final pillarsAsync      = ref.watch(weeklyPillarsProvider);
+    final momentumAsync     = ref.watch(meetingMomentumProvider);
+    final fearAsync         = ref.watch(fearInsightsProvider);
     final milestone         = ref.watch(sobrietyMilestoneProvider);
     final streak            = ref.watch(streakProvider);
 
@@ -29,7 +34,14 @@ class RecoveryInsightsScreen extends ConsumerWidget {
       ref.invalidate(journalInsightsProvider);
       ref.invalidate(serviceInsightsProvider);
       ref.invalidate(disturberBreakdownProvider);
+      ref.invalidate(step10TypeInsightsProvider);
       ref.invalidate(amendsJourneyProvider);
+      ref.invalidate(sponsorCallInsightsProvider);
+      ref.invalidate(spiritualLandscapeProvider);
+      ref.invalidate(meetingAttendanceStatsProvider);
+      ref.invalidate(weeklyPillarsProvider);
+      ref.invalidate(meetingMomentumProvider);
+      ref.invalidate(fearInsightsProvider);
     }
 
     return Scaffold(
@@ -64,6 +76,15 @@ class RecoveryInsightsScreen extends ConsumerWidget {
               data: (days) => _WeekAtAGlance(days: days),
               loading: () => const SizedBox(
                   height: 60, child: LinearProgressIndicator()),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── 2b. Recovery pillars ─────────────────────────────────────
+            pillarsAsync.when(
+              data: (pillars) => _RecoveryPillarsCard(pillars: pillars),
+              loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
             ),
 
@@ -105,6 +126,27 @@ class RecoveryInsightsScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
             ),
 
+            // ── 4b. Step 10 by context ───────────────────────────────────
+            step10TypeAsync.when(
+              data: (t) => t.hasData
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader(
+                          title: 'Step 10 by Context',
+                          subtitle:
+                              'Morning, Spot Check & Nightly reviews — last 30 days',
+                        ),
+                        const SizedBox(height: 12),
+                        _Step10TypeCard(insights: t),
+                        const SizedBox(height: 32),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
             // ── 5. Meetings & Fellowship ─────────────────────────────────
             const _SectionHeader(
               title: 'Meetings & Fellowship',
@@ -113,6 +155,18 @@ class RecoveryInsightsScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             attendanceAsync.when(
               data: (stats) => _MeetingStatsCard(stats: stats),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            momentumAsync.when(
+              data: (m) => m.hasEnoughData
+                  ? Column(
+                      children: [
+                        const SizedBox(height: 10),
+                        _MeetingMomentumCard(momentum: m),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
             ),
@@ -179,7 +233,47 @@ class RecoveryInsightsScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
             ),
 
-            // ── 9. Pattern insights ──────────────────────────────────────
+            // ── 9. Sponsor calls ─────────────────────────────────────────
+            sponsorCallAsync.when(
+              data: (sc) => sc.hasCalls
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader(
+                          title: 'Sponsor Contact',
+                          subtitle: 'Your connection with your sponsor',
+                        ),
+                        const SizedBox(height: 12),
+                        _SponsorCallCard(insights: sc),
+                        const SizedBox(height: 32),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
+            // ── 10. Fear work ────────────────────────────────────────────
+            fearAsync.when(
+              data: (f) => f.hasAny
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader(
+                          title: 'Fear Inventory',
+                          subtitle: 'Step 4 fears — what you\'re afraid of & your part',
+                        ),
+                        const SizedBox(height: 12),
+                        _FearWorkCard(insights: f),
+                        const SizedBox(height: 32),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
+            // ── 11. Pattern insights ─────────────────────────────────────
             const _SectionHeader(
               title: 'Pattern Insights',
               subtitle: 'Observations from your Step 4, 8, 10 & journal data',
@@ -1155,6 +1249,423 @@ class _StatCell extends StatelessWidget {
               textAlign: TextAlign.center),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sponsor call card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SponsorCallCard extends StatelessWidget {
+  final SponsorCallInsights insights;
+  const _SponsorCallCard({required this.insights});
+
+  static final _dateFmt = DateFormat('MMM d');
+
+  @override
+  Widget build(BuildContext context) {
+    final lastCallLabel = insights.lastCallAt == null
+        ? 'No calls yet'
+        : _dateFmt.format(insights.lastCallAt!);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Streak bar ────────────────────────────────────────────────
+            if (insights.weekStreak > 0) ...[
+              Row(
+                children: [
+                  const Icon(Icons.local_fire_department,
+                      color: Colors.orangeAccent, size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${insights.weekStreak}-week streak',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orangeAccent),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // ── Stats row ─────────────────────────────────────────────────
+            Row(
+              children: [
+                _StatCell(
+                  value: insights.callsThisWeek.toString(),
+                  label: 'This week',
+                  color: insights.callsThisWeek > 0
+                      ? Colors.tealAccent
+                      : Colors.grey,
+                ),
+                _StatCell(
+                  value: insights.callsLastWeek.toString(),
+                  label: 'Last week',
+                  color: insights.callsLastWeek > 0
+                      ? Colors.tealAccent.withValues(alpha: 0.7)
+                      : Colors.grey,
+                ),
+                _StatCell(
+                  value: insights.callsLast4Weeks.toString(),
+                  label: '4 weeks',
+                  color: Colors.blueGrey,
+                ),
+              ],
+            ),
+
+            const Divider(height: 24),
+
+            // ��─ Last call ─────────────────────────────────────────────────
+            Row(
+              children: [
+                const Icon(Icons.phone_outlined,
+                    size: 14, color: Colors.blueGrey),
+                const SizedBox(width: 6),
+                Text(
+                  'Last call: $lastCallLabel',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey.shade400),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recovery pillars
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RecoveryPillarsCard extends StatelessWidget {
+  final WeeklyPillars pillars;
+  const _RecoveryPillarsCard({required this.pillars});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (pillars.didReview,      Icons.track_changes_outlined, 'Review'),
+      (pillars.didMeditation,  Icons.self_improvement,       'Meditation'),
+      (pillars.didMeeting,     Icons.groups_outlined,         'Meeting'),
+      (pillars.didJournal,     Icons.menu_book_outlined,      'Journal'),
+      (pillars.didSponsorCall, Icons.phone_outlined,           'Sponsor'),
+      (pillars.didService,     Icons.volunteer_activism_outlined, 'Service'),
+    ];
+
+    final all = pillars.activeCount == 6;
+    final n = pillars.activeCount;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  '$n / 6 pillars this week',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: all ? Colors.teal.shade300 : Colors.white70,
+                  ),
+                ),
+                const Spacer(),
+                if (all)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Full toolkit',
+                      style: TextStyle(
+                        color: Colors.teal.shade300,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: items.map((item) {
+                final (active, icon, label) = item;
+                final color =
+                    active ? Colors.teal.shade300 : Colors.white12;
+                final textColor = active
+                    ? Colors.white70
+                    : Colors.grey.shade700;
+                return Column(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: active
+                            ? Colors.teal.withValues(alpha: 0.15)
+                            : Colors.white.withValues(alpha: 0.04),
+                        border: Border.all(color: color, width: 1.5),
+                      ),
+                      child: Icon(icon, size: 18, color: color),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      label,
+                      style: TextStyle(fontSize: 10, color: textColor),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Meeting momentum
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MeetingMomentumCard extends StatelessWidget {
+  final MeetingMomentum momentum;
+  const _MeetingMomentumCard({required this.momentum});
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = momentum.delta;
+    final growing = momentum.isGrowing;
+    final color =
+        growing ? Colors.teal.shade400 : Colors.blueGrey.shade400;
+    final icon =
+        growing ? Icons.trending_up_outlined : Icons.trending_flat_outlined;
+    final message = delta == 0
+        ? 'Same as last month — steady fellowship.'
+        : growing
+            ? '+$delta meetings compared to last month. Keep showing up.'
+            : '${delta.abs()} fewer than last month — meetings are worth protecting.';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            ),
+          ),
+          Text(
+            '${momentum.thisMonth} vs ${momentum.priorMonth}',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fear work card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FearWorkCard extends StatelessWidget {
+  final FearInsights insights;
+  const _FearWorkCard({required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = insights.pctWorked;
+    final color = pct >= 75
+        ? Colors.teal.shade400
+        : pct >= 40
+            ? Colors.indigo.shade300
+            : Colors.blueGrey.shade400;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.shield_outlined, color: color, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  '${insights.total} fear${insights.total == 1 ? '' : 's'} inventoried',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const Spacer(),
+                Text(
+                  '${insights.withMyPart} worked',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                      fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: pct / 100,
+                minHeight: 7,
+                backgroundColor: Colors.white10,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              pct >= 75
+                  ? '"My part" written for $pct% of fears. '
+                      'Owning your side is where fear loses its grip.'
+                  : insights.withMyPart == 0
+                      ? 'Writing "my part" for each fear is the Step 4 work that dissolves them.'
+                      : '"My part" written for $pct% of fears. '
+                          'Each one you complete is fear made smaller.',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                  height: 1.45),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 10 type breakdown card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Step10TypeCard extends StatelessWidget {
+  final Step10TypeInsights insights;
+  const _Step10TypeCard({required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.indigo.shade900,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TypeRow(
+            icon: Icons.wb_sunny_outlined,
+            label: 'Morning',
+            count: insights.morningCount,
+            signalRate: insights.morningSignalRate,
+            color: Colors.orange.shade300,
+          ),
+          const SizedBox(height: 14),
+          _TypeRow(
+            icon: Icons.track_changes_outlined,
+            label: 'Spot Check',
+            count: insights.spotCheckCount,
+            signalRate: insights.spotCheckSignalRate,
+            color: Colors.tealAccent.shade100,
+          ),
+          const SizedBox(height: 14),
+          _TypeRow(
+            icon: Icons.nightlight_round_outlined,
+            label: 'Nightly',
+            count: insights.nightlyCount,
+            signalRate: insights.nightlySignalRate,
+            color: Colors.indigo.shade200,
+          ),
+          const Divider(color: Colors.white12, height: 28),
+          Text(
+            '${insights.totalCount} total reviews in the last 30 days',
+            style: TextStyle(fontSize: 11, color: Colors.indigo.shade300),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypeRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final double signalRate;
+  final Color color;
+
+  const _TypeRow({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.signalRate,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (signalRate * 100).round();
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 88,
+          child: Text(
+            label,
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+        ),
+        Text(
+          '$count review${count == 1 ? '' : 's'}',
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        const Spacer(),
+        if (count > 0)
+          Text(
+            '$pct% flagged',
+            style: TextStyle(
+              fontSize: 11,
+              color: pct > 50
+                  ? Colors.redAccent.shade100
+                  : Colors.green.shade300,
+            ),
+          ),
+      ],
     );
   }
 }

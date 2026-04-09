@@ -13,7 +13,7 @@ void main() {
   const testKey =
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-  /// Drift @DriftDatabase user tables at schema v12 (sqlite_master names).
+  /// Drift @DriftDatabase user tables at schema v14 (sqlite_master names).
   const expectedTables = <String>{
     'resentments',
     'fears',
@@ -35,6 +35,8 @@ void main() {
     'sponsee_check_ins',
     'journal_entries',
     'literature_bookmarks',
+    'sponsor_call_logs',
+    'rolodex_contacts',
   };
 
   late Directory tempDir;
@@ -84,17 +86,17 @@ void main() {
       }
     });
 
-    test('schema version is 12 after fresh create', () async {
+    test('schema version is 15 after fresh create', () async {
       final db = await openDb();
       addTearDown(db.close);
       final row = await db
           .customSelect('PRAGMA user_version')
           .map((r) => r.read<int>('user_version'))
           .getSingle();
-      expect(row, 12);
+      expect(row, 15);
     });
 
-    test('all v12 user tables exist', () async {
+    test('all v14 user tables exist', () async {
       final db = await openDb();
       addTearDown(db.close);
       final rows = await db
@@ -249,6 +251,14 @@ void main() {
             ),
           );
 
+      await db.into(db.sponsorCallLogs).insert(
+            SponsorCallLogsCompanion.insert(confirmedAt: now),
+          );
+
+      await db.into(db.rolodexContacts).insert(
+            RolodexContactsCompanion.insert(name: 'Bob S.'),
+          );
+
       expect(await db.select(db.resentments).get(), hasLength(1));
       expect(await db.select(db.fears).get(), hasLength(1));
       expect(await db.select(db.harms).get(), hasLength(1));
@@ -269,6 +279,8 @@ void main() {
       expect(await db.select(db.twelfthStepCalls).get(), hasLength(1));
       expect(await db.select(db.journalEntries).get(), hasLength(1));
       expect(await db.select(db.literatureBookmarks).get(), hasLength(1));
+      expect(await db.select(db.sponsorCallLogs).get(), hasLength(1));
+      expect(await db.select(db.rolodexContacts).get(), hasLength(1));
     });
   });
 

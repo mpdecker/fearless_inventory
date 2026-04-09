@@ -132,8 +132,8 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(icon: Icon(Icons.search_outlined), text: 'Finder'),
-            Tab(icon: Icon(Icons.near_me_outlined), text: 'Nearby'),
+            Tab(icon: Icon(Icons.near_me_outlined), text: 'Browse'),
+            Tab(icon: Icon(Icons.search_outlined), text: 'Search'),
             Tab(icon: Icon(Icons.bookmark_outline), text: 'My Meetings'),
           ],
         ),
@@ -141,8 +141,8 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen>
       body: TabBarView(
         controller: _tabController,
         children: const [
-          _FinderTab(),
-          _NearbyTab(),
+          _BrowseTab(),
+          _SearchTab(),
           _MyMeetingsTab(),
         ],
       ),
@@ -195,17 +195,19 @@ class _SyncButton extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Finder tab
+// Browse tab — location-aware meeting discovery (merged Finder + Nearby)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _FinderTab extends HookConsumerWidget {
-  const _FinderTab();
+class _BrowseTab extends HookConsumerWidget {
+  const _BrowseTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allAsync = ref.watch(allMeetingsProvider);
-    final filtered = ref.watch(filteredMeetingsProvider);
-    final filter = ref.watch(meetingFilterProvider);
+    final allAsync  = ref.watch(allMeetingsProvider);
+    final filter    = ref.watch(meetingFilterProvider);
+    final browseResult = ref.watch(browseMeetingsProvider);
+    final activeLocation = ref.watch(activeLocationProvider).valueOrNull;
+    final radius    = ref.watch(distanceRadiusMiProvider);
     final searchCtrl = useTextEditingController();
 
     return Column(
@@ -222,7 +224,7 @@ class _FinderTab extends HookConsumerWidget {
                       .read(meetingFilterProvider.notifier)
                       .state = filter.copyWith(query: q),
                   decoration: InputDecoration(
-                    hintText: 'Search meetings, locations…',
+                    hintText: 'Search by name or city…',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: filter.query.isNotEmpty
                         ? IconButton(
@@ -243,8 +245,174 @@ class _FinderTab extends HookConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _FilterButton(filter: filter),
+              const _FilterButton(),
             ],
+          ),
+        ),
+
+        // ── Content ─────────────────────────────────────────────────────
+        Expanded(
+          child: allAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (all) {
+              if (all.isEmpty) {
+                return _EmptyState(
+                  onSync: () =>
+                      ref.read(meetingSyncProvider.notifier).triggerSync(),
+                );
+              }
+
+              final display = browseResult.display;
+              final distancesKm = browseResult.distancesKm;
+              final onlineOnly = filter.format == MeetingFormat.online ||
+                  filter.format == MeetingFormat.hybrid;
+
+              if (display.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      activeLocation != null && !onlineOnly
+                          ? 'No meetings within ${(radius ?? 100).toStringAsFixed(0)} mi. Try expanding the distance in Filters.'
+                          : 'No meetings match your filters.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.grey.shade500, height: 1.5),
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  if (activeLocation != null)
+                    _ActiveLocationBanner(
+                      active: activeLocation,
+                      visibleCount: distancesKm.isNotEmpty
+                          ? distancesKm.length
+                          : display.length,
+                      hiddenCount: 0,
+                      onRefresh: () {
+                        if (activeLocation.fromGps) {
+                          ref.refresh(userLocationProvider);
+                        } else {
+                          ref.refresh(geocodedLocationProvider);
+                        }
+                      },
+                    ),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+                      itemCount: display.length,
+                      itemBuilder: (_, i) => _MeetingCard(
+                        meeting: display[i],
+                        distanceKm: distancesKm[display[i].id],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Search tab — full meeting database search with optional location filter
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SearchTab extends HookConsumerWidget {
+  const _SearchTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allAsync       = ref.watch(allMeetingsProvider);
+    final filter         = ref.watch(meetingFilterProvider);
+    final locationEnabled = ref.watch(searchLocationEnabledProvider);
+    final activeLocation = ref.watch(activeLocationProvider).valueOrNull;
+    // When "Near me" is on, reuse the same pre-computed browse result.
+    final browseResult   = locationEnabled
+        ? ref.watch(browseMeetingsProvider)
+        : null;
+    final filtered       = locationEnabled ? null : ref.watch(filteredMeetingsProvider);
+    final searchCtrl     = useTextEditingController();
+
+    return Column(
+      children: [
+        // ── Search bar + filter button ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: searchCtrl,
+                  autofocus: false,
+                  onChanged: (q) => ref
+                      .read(meetingFilterProvider.notifier)
+                      .state = filter.copyWith(query: q),
+                  decoration: InputDecoration(
+                    hintText: 'Search all meetings worldwide…',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: filter.query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              searchCtrl.clear();
+                              ref.read(meetingFilterProvider.notifier).state =
+                                  filter.copyWith(query: '');
+                            },
+                          )
+                        : null,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const _FilterButton(),
+            ],
+          ),
+        ),
+
+        // ── "Near me" toggle chip ───────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FilterChip(
+              avatar: Icon(
+                locationEnabled && activeLocation != null
+                    ? Icons.my_location
+                    : Icons.location_searching,
+                size: 14,
+                color: locationEnabled && activeLocation != null
+                    ? Theme.of(context).colorScheme.onPrimaryContainer
+                    : null,
+              ),
+              label: Text(
+                locationEnabled && activeLocation != null
+                    ? 'Near ${activeLocation.label.split(',').first}'
+                    : 'Near me',
+              ),
+              selected: locationEnabled,
+              onSelected: (on) {
+                ref.read(searchLocationEnabledProvider.notifier).state = on;
+                if (on && activeLocation == null) {
+                  // Kick off location resolution if not yet available.
+                  ref.refresh(userLocationProvider);
+                }
+              },
+              visualDensity: VisualDensity.compact,
+              labelStyle: const TextStyle(fontSize: 12),
+            ),
           ),
         ),
 
@@ -262,351 +430,39 @@ class _FinderTab extends HookConsumerWidget {
                       .triggerSync(),
                 );
               }
-              if (filtered.isEmpty) {
+
+              // Use pre-computed browse result when location is on,
+              // otherwise use the already-sorted filteredMeetingsProvider.
+              final results = browseResult?.display ?? filtered ?? [];
+              final distancesKm = browseResult?.distancesKm ?? const <int, double>{};
+
+              if (results.isEmpty) {
                 return Center(
-                  child: Text(
-                    'No meetings match your filters.',
-                    style: TextStyle(color: Colors.grey.shade500),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      locationEnabled && activeLocation == null
+                          ? 'Waiting for location… Set a location in Filters.'
+                          : 'No meetings match your filters.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.grey.shade500, height: 1.5),
+                    ),
                   ),
                 );
               }
               return ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
-                itemCount: filtered.length,
-                itemBuilder: (_, i) => _MeetingCard(meeting: filtered[i]),
+                itemCount: results.length,
+                itemBuilder: (_, i) => _MeetingCard(
+                  meeting: results[i],
+                  distanceKm: distancesKm[results[i].id],
+                ),
               );
             },
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Nearby tab
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Radius preset options shown as chips.
-const _kRadiusOptions = <String, double?>{
-  'Any': null,
-  '5 mi': 5,
-  '10 mi': 10,
-  '25 mi': 25,
-  '50 mi': 50,
-  '100 mi': 100,
-};
-
-class _NearbyTab extends HookConsumerWidget {
-  const _NearbyTab();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeAsync = ref.watch(activeLocationProvider);
-    final allAsync = ref.watch(allMeetingsProvider);
-    final query = ref.watch(locationQueryProvider);
-    final radius = ref.watch(distanceRadiusMiProvider);
-    final filter = ref.watch(meetingFilterProvider);
-
-    // Whether a custom query is typed and geocoding is in flight.
-    final geocodeAsync = ref.watch(geocodedLocationProvider);
-    final isGeocoding =
-        query.trim().isNotEmpty && geocodeAsync.isLoading;
-
-    return Column(
-      children: [
-        // ── Location input ──────────────────────────────────────────────
-        _LocationInputBar(isGeocoding: isGeocoding),
-
-        // ── Radius chips + filter button ────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final entry in _kRadiusOptions.entries)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(entry.key),
-                            selected: radius == entry.value,
-                            onSelected: (_) => ref
-                                .read(distanceRadiusMiProvider.notifier)
-                                .state = entry.value,
-                            visualDensity: VisualDensity.compact,
-                            labelStyle: TextStyle(
-                              fontSize: 12,
-                              fontWeight: radius == entry.value
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              _FilterButton(filter: filter),
-            ],
-          ),
-        ),
-
-        // ── Content ─────────────────────────────────────────────────────
-        Expanded(
-          child: activeAsync.when(
-            loading: () => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(
-                    query.trim().isNotEmpty
-                        ? 'Looking up "${query.trim()}"…'
-                        : 'Getting your location…',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            error: (e, _) => _LocationError(
-              message: 'Could not resolve location: $e',
-              onRetry: () {
-                ref.refresh(userLocationProvider);
-                ref.refresh(geocodedLocationProvider);
-              },
-            ),
-            data: (active) {
-              if (active == null) {
-                // Show a friendlier state that also surfaces the text input.
-                return _LocationUnavailable(
-                  hasCustomQuery: query.trim().isNotEmpty,
-                  onRetryGps: () {
-                    ref.read(locationQueryProvider.notifier).state = '';
-                    // Request permission explicitly on retry (same policy as
-                    // the GPS button — never auto-request on tab open).
-                    () async {
-                      LocationPermission perm =
-                          await Geolocator.checkPermission();
-                      if (perm == LocationPermission.denied) {
-                        perm = await Geolocator.requestPermission();
-                      }
-                      ref.refresh(userLocationProvider);
-                    }();
-                  },
-                );
-              }
-
-              return allAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-                data: (all) {
-                  if (all.isEmpty) {
-                    return _EmptyState(
-                      onSync: () => ref
-                          .read(meetingSyncProvider.notifier)
-                          .triggerSync(),
-                    );
-                  }
-
-                  // Apply shared filters (day, time, type, format, fellowship).
-                  final filtered = filter.apply(all);
-
-                  // Compute distances and sort.
-                  final withCoords = <_DistancedMeeting>[];
-                  final noCoords = <Meeting>[];
-
-                  for (final m in filtered) {
-                    if (m.latitude != null && m.longitude != null) {
-                      final km = haversineKm(
-                        active.latitude,
-                        active.longitude,
-                        m.latitude!,
-                        m.longitude!,
-                      );
-                      withCoords.add(_DistancedMeeting(m, km));
-                    } else {
-                      noCoords.add(m);
-                    }
-                  }
-                  withCoords.sort(
-                      (a, b) => a.distanceKm!.compareTo(b.distanceKm!));
-
-                  // Apply radius filter.
-                  final radiusKm =
-                      radius != null ? miToKm(radius) : null;
-                  final visible = radiusKm != null
-                      ? withCoords
-                          .where((d) => d.distanceKm! <= radiusKm)
-                          .toList()
-                      : [
-                          ...withCoords,
-                          ...noCoords.map((m) => _DistancedMeeting(m, null)),
-                        ];
-
-                  final hiddenCount = radiusKm != null
-                      ? (withCoords.length - visible.length) +
-                          noCoords.length
-                      : 0;
-
-                  return Column(
-                    children: [
-                      // Active location banner
-                      _ActiveLocationBanner(
-                        active: active,
-                        visibleCount: visible.length,
-                        hiddenCount: hiddenCount,
-                        onRefresh: () {
-                          if (active.fromGps) {
-                            ref.refresh(userLocationProvider);
-                          } else {
-                            ref.refresh(geocodedLocationProvider);
-                          }
-                        },
-                      ),
-                      Expanded(
-                        child: visible.isEmpty
-                            ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(32),
-                                  child: Text(
-                                    radius != null
-                                        ? 'No meetings within $radius mi of ${active.label}.'
-                                        : 'No meetings with location data.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        height: 1.5),
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(
-                                    12, 8, 12, 100),
-                                itemCount: visible.length,
-                                itemBuilder: (_, i) => _MeetingCard(
-                                  meeting: visible[i].meeting,
-                                  distanceKm: visible[i].distanceKm,
-                                ),
-                              ),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Location input bar ────────────────────────────────────────────────────────
-
-class _LocationInputBar extends HookConsumerWidget {
-  final bool isGeocoding;
-  const _LocationInputBar({required this.isGeocoding});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final query = ref.watch(locationQueryProvider);
-    final ctrl = useTextEditingController();
-
-    // Keep controller text in sync when cleared externally.
-    useEffect(() {
-      if (query.isEmpty && ctrl.text.isNotEmpty) ctrl.clear();
-      return null;
-    }, [query]);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: ctrl,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (v) {
-                final trimmed = v.trim();
-                ref.read(locationQueryProvider.notifier).state = trimmed;
-                if (trimmed.isNotEmpty) {
-                  ref.refresh(geocodedLocationProvider);
-                }
-              },
-              decoration: InputDecoration(
-                hintText: 'Zip code or city name…',
-                prefixIcon: isGeocoding
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : const Icon(Icons.search_outlined, size: 20),
-                suffixIcon: query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        tooltip: 'Clear — use GPS',
-                        onPressed: () {
-                          ctrl.clear();
-                          ref.read(locationQueryProvider.notifier).state =
-                              '';
-                        },
-                      )
-                    : null,
-                isDense: true,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                hintStyle:
-                    TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // GPS button — explicitly request permission then acquire location.
-          Tooltip(
-            message: query.isEmpty ? 'Using GPS' : 'Use GPS instead',
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () async {
-                ctrl.clear();
-                ref.read(locationQueryProvider.notifier).state = '';
-                // Only show the system permission dialog when the user
-                // explicitly taps this button, not on tab open.
-                LocationPermission perm = await Geolocator.checkPermission();
-                if (perm == LocationPermission.denied) {
-                  perm = await Geolocator.requestPermission();
-                }
-                ref.refresh(userLocationProvider);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: query.isEmpty
-                      ? Colors.blue.shade600
-                      : Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.my_location,
-                  size: 20,
-                  color: query.isEmpty ? Colors.white : Colors.grey.shade600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -737,12 +593,6 @@ class _LocationUnavailable extends StatelessWidget {
   }
 }
 
-class _DistancedMeeting {
-  final Meeting meeting;
-  final double? distanceKm;
-  const _DistancedMeeting(this.meeting, this.distanceKm);
-}
-
 class _LocationError extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
@@ -784,13 +634,16 @@ class _LocationError extends StatelessWidget {
 const _kDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const _kFilterTypes = ['O', 'C', 'BB', 'ST', 'SP', 'BE', 'MED'];
 
-class _FilterButton extends StatelessWidget {
-  final MeetingFilter filter;
-  const _FilterButton({required this.filter});
+class _FilterButton extends ConsumerWidget {
+  const _FilterButton();
 
   @override
-  Widget build(BuildContext context) {
-    final count = filter.activeCount;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(meetingFilterProvider);
+    final radius = ref.watch(distanceRadiusMiProvider);
+    // Count a non-default radius (anything other than 100 mi) as active.
+    final radiusActive = radius != 100.0;
+    final count = filter.activeCount + (radiusActive ? 1 : 0);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -849,12 +702,37 @@ class _FilterButton extends StatelessWidget {
 // Filter sheet (grouped bottom sheet)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _FilterSheet extends ConsumerWidget {
+// Radius preset options.
+const _kRadiusOptions = <String, double?>{
+  'Any': null,
+  '5 mi': 5,
+  '10 mi': 10,
+  '25 mi': 25,
+  '50 mi': 50,
+  '100 mi': 100,
+};
+
+class _FilterSheet extends HookConsumerWidget {
   const _FilterSheet();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(meetingFilterProvider);
+    final radius = ref.watch(distanceRadiusMiProvider);
+    final locationQuery = ref.watch(locationQueryProvider);
+    final activeAsync = ref.watch(activeLocationProvider);
+    final geocodeAsync = ref.watch(geocodedLocationProvider);
+    final isGeocoding =
+        locationQuery.trim().isNotEmpty && geocodeAsync.isLoading;
+    final locationCtrl = useTextEditingController();
+
+    // Keep controller in sync when query is cleared externally.
+    useEffect(() {
+      if (locationQuery.isEmpty && locationCtrl.text.isNotEmpty) {
+        locationCtrl.clear();
+      }
+      return null;
+    }, [locationQuery]);
 
     void update(MeetingFilter f) =>
         ref.read(meetingFilterProvider.notifier).state = f;
@@ -863,11 +741,10 @@ class _FilterSheet extends ConsumerWidget {
 
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.75,
+      initialChildSize: 0.85,
       minChildSize: 0.4,
       maxChildSize: 0.95,
       builder: (ctx, scrollCtrl) => Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           // ── Header ───────────────────────────────────────────────────
           Padding(
@@ -880,7 +757,11 @@ class _FilterSheet extends ConsumerWidget {
                         )),
                 const Spacer(),
                 TextButton(
-                  onPressed: () => update(const MeetingFilter()),
+                  onPressed: () {
+                    update(const MeetingFilter());
+                    ref.read(distanceRadiusMiProvider.notifier).state = 100.0;
+                    ref.read(locationQueryProvider.notifier).state = '';
+                  },
                   child: const Text('Clear all'),
                 ),
               ],
@@ -893,6 +774,149 @@ class _FilterSheet extends ConsumerWidget {
               controller: scrollCtrl,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               children: [
+                // ── LOCATION ─────────────────────────────────────────
+                _SectionHeader(
+                    icon: Icons.near_me_outlined, label: 'Location'),
+                const SizedBox(height: 8),
+
+                // GPS / zip input row
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: locationCtrl,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (v) {
+                          final trimmed = v.trim();
+                          ref.read(locationQueryProvider.notifier).state =
+                              trimmed;
+                          if (trimmed.isNotEmpty) {
+                            ref.refresh(geocodedLocationProvider);
+                          }
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Zip code or city…',
+                          prefixIcon: isGeocoding
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                )
+                              : const Icon(Icons.search_outlined, size: 18),
+                          suffixIcon: locationQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  tooltip: 'Clear — use GPS',
+                                  onPressed: () {
+                                    locationCtrl.clear();
+                                    ref
+                                        .read(locationQueryProvider.notifier)
+                                        .state = '';
+                                  },
+                                )
+                              : null,
+                          isDense: true,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: locationQuery.isEmpty
+                          ? 'Using GPS'
+                          : 'Switch to GPS',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () async {
+                          locationCtrl.clear();
+                          ref.read(locationQueryProvider.notifier).state = '';
+                          LocationPermission perm =
+                              await Geolocator.checkPermission();
+                          if (perm == LocationPermission.denied) {
+                            perm = await Geolocator.requestPermission();
+                          }
+                          ref.refresh(userLocationProvider);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: locationQuery.isEmpty
+                                ? Colors.blue.shade600
+                                : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.my_location,
+                            size: 18,
+                            color: locationQuery.isEmpty
+                                ? Colors.white
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Active location label (if resolved)
+                if (activeAsync.valueOrNull != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        activeAsync.value!.fromGps
+                            ? Icons.my_location
+                            : Icons.location_on_outlined,
+                        size: 13,
+                        color: Colors.blue.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          activeAsync.value!.label,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade700,
+                              fontStyle: FontStyle.italic),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 10),
+                Text('Distance (in-person)',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurface.withAlpha(153),
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final entry in _kRadiusOptions.entries)
+                      _FilterChip(
+                        label: entry.key,
+                        selected: radius == entry.value,
+                        onTap: () => ref
+                            .read(distanceRadiusMiProvider.notifier)
+                            .state = entry.value,
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
                 // ── SCHEDULE ──────────────────────────────────────────
                 _SectionHeader(icon: Icons.calendar_today_outlined,
                     label: 'Schedule'),

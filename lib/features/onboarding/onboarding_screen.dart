@@ -4,7 +4,7 @@ import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/onboarding_service.dart';
-import '../home/home_screen.dart';
+import '../auth/screens/pin_setup_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page data model
@@ -119,8 +119,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finish() async {
     await OnboardingService.markComplete();
     if (!mounted) return;
+    // After onboarding, always go to PIN setup before the home screen.
     Navigator.of(context).pushReplacement(
-      adaptivePageRoute((_) => const HomeScreen()),
+      adaptivePageRoute((_) => const PinSetupScreen()),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().processPendingLaunchNotification();

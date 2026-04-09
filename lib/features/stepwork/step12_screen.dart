@@ -13,6 +13,7 @@ import '../../data/repositories/service_commitments_repository.dart';
 import '../../data/repositories/sponsee_repository.dart';
 import '../../data/repositories/meetings_repository.dart';
 import '../meetings/services/meeting_calendar_service.dart';
+import 'rolodex_tab.dart';
 import 'sponsee_detail_screen.dart';
 import 'providers/step12_providers.dart';
 
@@ -81,7 +82,7 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -101,6 +102,7 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
           tabs: const [
             Tab(icon: Icon(Icons.calendar_month_outlined), text: 'Calendar'),
             Tab(icon: Icon(Icons.people_outline), text: 'Sponsees'),
+            Tab(icon: Icon(Icons.contacts_outlined), text: 'Rolodex'),
             Tab(icon: Icon(Icons.volunteer_activism_outlined), text: 'Service'),
           ],
         ),
@@ -110,6 +112,7 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
         children: const [
           _CalendarTab(),
           _SponseeTab(),
+          RolodexTab(),
           _ServiceTab(),
         ],
       ),
@@ -136,6 +139,14 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
           foregroundColor: Colors.white,
         );
       case 2:
+        return FloatingActionButton.extended(
+          onPressed: () => RolodexTab.openAddContact(context),
+          icon: const Icon(Icons.person_add_outlined),
+          label: const Text('Add Contact'),
+          backgroundColor: Colors.teal.shade700,
+          foregroundColor: Colors.white,
+        );
+      case 3:
         final subTab = ref.watch(serviceSubTabProvider);
         if (subTab == 1) {
           return FloatingActionButton.extended(

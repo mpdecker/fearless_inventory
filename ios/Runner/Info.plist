@@ -82,5 +82,7 @@
 	<string>Fearless Inventory uses your location to find recovery meetings near you.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Fearless Inventory uses your location to find recovery meetings near you.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Fearless Inventory can import names and phone numbers from your contacts into your Rolodex.</string>
 </dict>
 </plist>

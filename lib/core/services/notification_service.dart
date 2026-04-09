@@ -14,9 +14,11 @@ class NotificationService {
   /// Notification IDs (avoid cancelAll so multiple reminders can coexist).
   static const int idDailyReview = 101;
   static const int idBedtimeMeditation = 102;
+  static const int idSponsorCall = 103;
 
   static const String _payloadDailyReview = 'daily_review';
   static const String _payloadBedtime = 'bedtime_meditation';
+  static const String _payloadSponsorCall = 'sponsor_call';
 
   /// Default times — keep in sync when rescheduling after daily review save.
   static const int defaultDailyReviewHour = 21;
@@ -179,6 +181,66 @@ class NotificationService {
     }
   }
 
+  /// Schedule a "Call your sponsor" reminder.
+  ///
+  /// [frequency] must be 'daily' or 'weekly'.
+  /// [weekday] is the ISO weekday (1 = Monday … 7 = Sunday) and is only used
+  /// when [frequency] is 'weekly'.
+  Future<void> scheduleSponsorCallReminder({
+    required int hour,
+    required int minute,
+    required String frequency,
+    int weekday = 1,
+  }) async {
+    if (Platform.isAndroid) {
+      final status = await Permission.scheduleExactAlarm.status;
+      if (status.isDenied) {
+        debugPrint(
+            'Cannot schedule sponsor call reminder: exact alarm permission denied.');
+        return;
+      }
+    }
+
+    final isWeekly = frequency == 'weekly';
+    final scheduled = isWeekly
+        ? _nextInstanceOfWeekdayAndTime(weekday, hour, minute)
+        : _nextInstanceOfTime(hour, minute);
+    final components = isWeekly
+        ? DateTimeComponents.dayOfWeekAndTime
+        : DateTimeComponents.time;
+
+    try {
+      await _notifications.zonedSchedule(
+        idSponsorCall,
+        'Call your sponsor',
+        'Stay connected — reach out to your sponsor today.',
+        scheduled,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'sponsor_call_channel',
+            'Sponsor Call Reminders',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+            presentBadge: true,
+          ),
+        ),
+        payload: _payloadSponsorCall,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: components,
+      );
+    } catch (e, st) {
+      debugPrint('scheduleSponsorCallReminder failed: $e\n$st');
+    }
+  }
+
+  Future<void> cancelSponsorCallReminder() => cancelNotification(idSponsorCall);
+
   Future<void> cancelNotification(int id) => _notifications.cancel(id);
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
@@ -190,6 +252,24 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
     return scheduledDate;
+  }
+
+  /// Returns the next occurrence of [weekday] at [hour]:[minute] local time.
+  /// [weekday] is the ISO weekday (1 = Monday … 7 = Sunday), matching
+  /// [DateTime.weekday] / [TZDateTime.weekday].
+  tz.TZDateTime _nextInstanceOfWeekdayAndTime(
+      int weekday, int hour, int minute) {
+    tz.TZDateTime candidate =
+        tz.TZDateTime(tz.local, tz.TZDateTime.now(tz.local).year,
+            tz.TZDateTime.now(tz.local).month, tz.TZDateTime.now(tz.local).day,
+            hour, minute);
+
+    // Advance until we land on the desired weekday after now.
+    final now = tz.TZDateTime.now(tz.local);
+    while (candidate.weekday != weekday || !candidate.isAfter(now)) {
+      candidate = candidate.add(const Duration(days: 1));
+    }
+    return candidate;
   }
 
   Future<void> cancelAll() async => _notifications.cancelAll();

@@ -32,6 +32,20 @@ dependencies:
   # Security: per-device database key storage
   flutter_secure_storage: ^9.0.0
 
+  # Authentication — Firebase (optional cloud account)
+  firebase_core: ^3.1.0
+  firebase_auth: ^5.1.0
+
+  # OAuth providers (App Store requires Sign in with Apple alongside Google)
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.0
+
+  # Biometric / device-credential unlock (Face ID, Touch ID, Fingerprint)
+  local_auth: ^2.3.0
+
+  # Cryptography — PIN salted-hash storage
+  crypto: ^3.0.3
+
   # Icons & UI
   cupertino_icons: ^1.0.6
   intl: ^0.19.0
@@ -42,6 +56,12 @@ dependencies:
 
   # URL launching (Zoom deep links, maps)
   url_launcher: ^6.2.5
+
+  # Device contacts — import to Rolodex
+  # Local copy with iOS 13+ SceneDelegate nil-crash fix applied to
+  # SwiftFlutterContactsPlugin.swift (register & contactViewControllerDidCancel).
+  flutter_contacts:
+    path: packages/flutter_contacts
 
   # Location (Nearby meetings)
   geolocator: ^12.0.0
@@ -68,6 +88,9 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^3.0.0
+
+  # Mocking for unit / widget tests
+  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true

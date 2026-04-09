@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-import '../../core/navigation/adaptive_page_route.dart';
-import '../../core/widgets/app_dialogs.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+import '../../core/database/database.dart';
+import '../../core/navigation/adaptive_page_route.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/providers/sobriety_provider.dart';
+import '../../core/providers/sponsor_call_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/onboarding_service.dart';
-import '../../core/providers/sobriety_provider.dart';
-import '../../data/services/export_service.dart';
+import '../../core/services/seed_data_service.dart';
+import '../../core/services/sponsor_call_prefs.dart';
+import '../../core/widgets/app_dialogs.dart';
+import '../../data/repositories/amends_repository.dart';
 import '../../data/repositories/inventory_repository.dart';
 import '../../data/repositories/journal_repository.dart';
 import '../../data/repositories/review_repository.dart';
-import '../../data/repositories/amends_repository.dart';
-import '../../core/database/database.dart';
+import '../../data/repositories/sponsor_call_repository.dart';
+import '../../data/services/export_service.dart';
+import '../auth/screens/account_screen.dart';
+import '../auth/screens/pin_setup_screen.dart';
+import '../insights/providers/insights_extended_providers.dart';
+import '../meetings/providers/meeting_attendance_provider.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../review/providers/insight_provider.dart';
+import '../review/providers/streak_provider.dart';
+import '../review/providers/trend_provider.dart';
+import '../sponsor_call/sponsor_call_screen.dart';
 import 'screens/literature_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -133,6 +146,21 @@ class SettingsScreen extends ConsumerWidget {
 
           const _NotificationsReminderTile(),
 
+          const _SponsorCallReminderTile(),
+
+          _SponsorCallLogTile(),
+
+          const Divider(),
+          _buildSectionHeader('Demo'),
+
+          ListTile(
+            leading: const Icon(Icons.science_outlined, color: Colors.tealAccent),
+            title: const Text('Load Demo Data'),
+            subtitle: const Text(
+                '18-month recovery narrative — fills every screen and insight card for demonstration'),
+            onTap: () => _loadDemoData(context, ref),
+          ),
+
           const Divider(),
           _buildSectionHeader('Privacy'),
 
@@ -144,6 +172,25 @@ class SettingsScreen extends ConsumerWidget {
                 const Text('Permanently wipe all inventory, reviews, and amends from this device'),
             onTap: () => _confirmDataWipe(context, ref),
           ),
+
+          const Divider(),
+          _buildSectionHeader('Security'),
+
+          // ── PIN management ─────────────────────────────────────────────
+          ListTile(
+            leading: const Icon(Icons.pin_outlined, color: Colors.tealAccent),
+            title: const Text('Change PIN'),
+            subtitle: const Text('Update your 6-digit app-lock PIN'),
+            onTap: () => Navigator.of(context).push(
+              adaptivePageRoute((_) => const PinSetupScreen(isChangingPin: true)),
+            ),
+          ),
+
+          const Divider(),
+          _buildSectionHeader('Cloud Account'),
+
+          // ── Cloud account ──────────────────────────────────────────────
+          _CloudAccountTile(),
 
           const Divider(),
           _buildSectionHeader('Onboarding'),
@@ -329,6 +376,61 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _loadDemoData(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Load Demo Data?'),
+        content: const Text(
+          'This will wipe all existing data and replace it with a realistic '
+          '18-month recovery narrative.\n\n'
+          'Every screen, insight card, and feature will have content to explore.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Load Demo'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final db = ref.read(databaseProvider);
+    await SeedDataService(db).seed();
+
+    // Refresh all providers so every screen reflects the seeded data immediately.
+    ref.invalidate(sobrietyDateProvider);
+    ref.invalidate(insightsProvider);
+    ref.invalidate(streakProvider);
+    ref.invalidate(spiritualLandscapeProvider);
+    ref.invalidate(journalInsightsProvider);
+    ref.invalidate(weekActivityProvider);
+    ref.invalidate(disturberBreakdownProvider);
+    ref.invalidate(serviceInsightsProvider);
+    ref.invalidate(amendsJourneyProvider);
+    ref.invalidate(sponsorCallInsightsProvider);
+    ref.invalidate(step10TypeInsightsProvider);
+    ref.invalidate(meetingAttendanceStatsProvider);
+    ref.invalidate(weeklyPillarsProvider);
+    ref.invalidate(meetingMomentumProvider);
+    ref.invalidate(fearInsightsProvider);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Demo data loaded — explore every screen!'),
+          backgroundColor: Colors.teal,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _executeDataWipe(BuildContext context, WidgetRef ref) async {
@@ -561,6 +663,389 @@ class _NotificationsReminderTileState extends State<_NotificationsReminderTile>
           subtitle: Text(scheduleSubtitle),
         );
       },
+    );
+  }
+}
+
+// ── Sponsor call reminder tile ────────────────────────────────────────────────
+
+/// Shows the current sponsor-call reminder schedule and opens a configuration
+/// sheet when tapped.
+class _SponsorCallReminderTile extends ConsumerWidget {
+  const _SponsorCallReminderTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final configAsync = ref.watch(sponsorCallConfigProvider);
+
+    final subtitle = configAsync.maybeWhen(
+      data: (c) {
+        if (!c.enabled) return 'Tap to configure';
+        final timeStr = _formatTime(context, c.hour, c.minute);
+        if (c.frequency == 'weekly') {
+          final dayName = _weekdayName(c.weekday);
+          return 'Weekly — $dayName at $timeStr';
+        }
+        return 'Daily at $timeStr';
+      },
+      orElse: () => 'Loading…',
+    );
+
+    return ListTile(
+      leading: Icon(
+        Icons.phone_forwarded_outlined,
+        color: configAsync.maybeWhen(
+          data: (c) => c.enabled ? Colors.tealAccent : Colors.blueGrey,
+          orElse: () => Colors.blueGrey,
+        ),
+      ),
+      title: const Text('Call your sponsor reminder'),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.tune_outlined, color: Colors.white38),
+      onTap: () => _openConfigSheet(context, ref),
+    );
+  }
+
+  Future<void> _openConfigSheet(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E1E2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _SponsorCallConfigSheet(ref: ref),
+    );
+  }
+
+  static String _formatTime(BuildContext context, int hour, int minute) {
+    final loc = MaterialLocalizations.of(context);
+    return loc.formatTimeOfDay(
+      TimeOfDay(hour: hour, minute: minute),
+      alwaysUse24HourFormat:
+          MediaQuery.alwaysUse24HourFormatOf(context),
+    );
+  }
+
+  static String _weekdayName(int weekday) {
+    const names = [
+      '', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+      'Saturday', 'Sunday'
+    ];
+    return weekday >= 1 && weekday <= 7 ? names[weekday] : '';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Configuration bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SponsorCallConfigSheet extends StatefulWidget {
+  final WidgetRef ref;
+  const _SponsorCallConfigSheet({required this.ref});
+
+  @override
+  State<_SponsorCallConfigSheet> createState() =>
+      _SponsorCallConfigSheetState();
+}
+
+class _SponsorCallConfigSheetState extends State<_SponsorCallConfigSheet> {
+  late SponsorCallConfig _draft;
+  final _phoneController = TextEditingController();
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final current = widget.ref
+        .read(sponsorCallConfigProvider)
+        .maybeWhen(data: (c) => c, orElse: () => SponsorCallConfig.defaults);
+    _draft = current;
+    _phoneController.text = current.phone ?? '';
+    _loaded = true;
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+
+    final padding = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + padding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Handle ────────────────────────────────────────────────────────
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          const Text(
+            'Call your sponsor reminder',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Enable toggle ─────────────────────────────────────────────────
+          SwitchListTile(
+            value: _draft.enabled,
+            onChanged: (v) => setState(() => _draft = _draft.copyWith(enabled: v)),
+            title: const Text('Enable reminder'),
+            activeColor: Colors.tealAccent,
+            contentPadding: EdgeInsets.zero,
+          ),
+
+          const Divider(),
+
+          if (_draft.enabled) ...[
+            // ── Frequency chips ───────────────────────────────────────────
+            const Text('Repeat', style: TextStyle(color: Colors.blueGrey)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _FrequencyChip(
+                  label: 'Daily',
+                  selected: _draft.frequency == 'daily',
+                  onTap: () =>
+                      setState(() => _draft = _draft.copyWith(frequency: 'daily')),
+                ),
+                const SizedBox(width: 8),
+                _FrequencyChip(
+                  label: 'Weekly',
+                  selected: _draft.frequency == 'weekly',
+                  onTap: () =>
+                      setState(() => _draft = _draft.copyWith(frequency: 'weekly')),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // ── Day of week (weekly only) ─────────────────────────────────
+            if (_draft.frequency == 'weekly') ...[
+              const Text('Day', style: TextStyle(color: Colors.blueGrey)),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(7, (i) {
+                    final weekday = i + 1; // 1=Mon…7=Sun
+                    const abbr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: _FrequencyChip(
+                        label: abbr[i],
+                        selected: _draft.weekday == weekday,
+                        onTap: () =>
+                            setState(() => _draft = _draft.copyWith(weekday: weekday)),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ── Time ──────────────────────────────────────────────────────
+            const Text('Time', style: TextStyle(color: Colors.blueGrey)),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.access_time_outlined),
+              label: Text(
+                MaterialLocalizations.of(context).formatTimeOfDay(
+                  TimeOfDay(hour: _draft.hour, minute: _draft.minute),
+                  alwaysUse24HourFormat:
+                      MediaQuery.alwaysUse24HourFormatOf(context),
+                ),
+              ),
+              onPressed: () => _pickTime(context),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // ── Phone number ───────────────────────────────────────────────────
+          const Text("Sponsor's phone number",
+              style: TextStyle(color: Colors.blueGrey)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              hintText: 'e.g. +1 555 000 1234',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── Save ───────────────────────────────────────────────────────────
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.tealAccent,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: () => _save(context),
+            child: const Text('Save',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _draft.hour, minute: _draft.minute),
+    );
+    if (picked != null) {
+      setState(() =>
+          _draft = _draft.copyWith(hour: picked.hour, minute: picked.minute));
+    }
+  }
+
+  Future<void> _save(BuildContext context) async {
+    final phone = _phoneController.text.trim();
+    final finalConfig = _draft.copyWith(
+      phone: phone.isNotEmpty ? phone : null,
+      clearPhone: phone.isEmpty,
+    );
+    await widget.ref.read(sponsorCallConfigProvider.notifier).save(finalConfig);
+    if (context.mounted) Navigator.of(context).pop();
+  }
+}
+
+class _FrequencyChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FrequencyChip(
+      {required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? Colors.tealAccent : Colors.white10,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? Colors.tealAccent : Colors.white24,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.black : Colors.white70,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sponsor call log-a-call tile ──────────────────────────────────────────────
+
+/// Shows the last logged sponsor call and navigates to [SponsorCallScreen]
+/// for manual call logging.
+class _SponsorCallLogTile extends ConsumerWidget {
+  _SponsorCallLogTile();
+
+  static final _dateFmt = DateFormat('MMM d');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lastCallAsync = ref.watch(_sponsorCallLastProvider);
+
+    final subtitle = lastCallAsync.maybeWhen(
+      data: (last) {
+        if (last == null) return 'No calls logged yet — tap to log one';
+        final diff = DateTime.now().difference(last.confirmedAt);
+        if (diff.inDays == 0) return 'Last called today';
+        if (diff.inDays == 1) return 'Last called yesterday';
+        return 'Last called ${_dateFmt.format(last.confirmedAt)} — ${diff.inDays} days ago';
+      },
+      orElse: () => 'Loading…',
+    );
+
+    return ListTile(
+      leading: const Icon(Icons.phone_callback_outlined, color: Colors.teal),
+      title: const Text('Log a sponsor call'),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+      onTap: () => Navigator.of(context).push(
+        adaptivePageRoute((_) => const SponsorCallScreen()),
+      ),
+    );
+  }
+}
+
+final _sponsorCallLastProvider =
+    StreamProvider.autoDispose<SponsorCallLog?>((ref) {
+  return ref.watch(sponsorCallRepositoryProvider).watchLastCall();
+});
+
+// ── Cloud account tile ────────────────────────────────────────────────────────
+
+/// Shows a brief summary of the user's cloud account state and links to the
+/// full [AccountScreen] for sign-in / registration / deletion.
+class _CloudAccountTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(firebaseUserProvider);
+
+    return userAsync.when(
+      loading: () => const ListTile(
+        leading: Icon(Icons.cloud_outlined, color: Colors.blueGrey),
+        title: Text('Cloud Account'),
+        subtitle: Text('Loading…'),
+      ),
+      error: (_, __) => ListTile(
+        leading:
+            const Icon(Icons.cloud_off_outlined, color: Colors.blueGrey),
+        title: const Text('Cloud Account'),
+        subtitle: const Text('Unavailable'),
+        onTap: () => Navigator.of(context).push(
+          adaptivePageRoute((_) => const AccountScreen()),
+        ),
+      ),
+      data: (user) => ListTile(
+        leading: Icon(
+          user != null ? Icons.cloud_done_outlined : Icons.cloud_outlined,
+          color: user != null ? Colors.tealAccent : Colors.blueGrey,
+        ),
+        title: const Text('Cloud Account'),
+        subtitle: Text(
+          user != null
+              ? user.email ?? 'Signed in'
+              : 'No account — optional',
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+        onTap: () => Navigator.of(context).push(
+          adaptivePageRoute((_) => const AccountScreen()),
+        ),
+      ),
     );
   }
 }

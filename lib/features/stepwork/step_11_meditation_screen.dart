@@ -6,6 +6,9 @@ import '../../core/database/database.dart';
 import '../../data/services/reflection_service.dart';
 import '../../data/repositories/meditation_repository.dart';
 import '../../core/widgets/meditation_timer.dart';
+import 'morning_transition_screen.dart';
+import '../review/daily_review_screen.dart';
+import '../review/review_type.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider
@@ -186,6 +189,27 @@ class Step11MeditationScreen extends HookConsumerWidget {
 
           // ── Morning prayer ────────────────────────────────────────────
           _buildMorningPrayer(),
+          const SizedBox(height: 20),
+
+          // ── Morning 10th Step review ──────────────────────────────────
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    const DailyReviewScreen(reviewType: ReviewType.morning),
+              ),
+            ),
+            icon: const Icon(Icons.checklist_outlined),
+            label: const Text('Morning 10th Step'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              foregroundColor: Colors.orange.shade800,
+              side: BorderSide(color: Colors.orange.shade300),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
           const SizedBox(height: 28),
 
           // ── Meditation timer ──────────────────────────────────────────
@@ -205,7 +229,15 @@ class Step11MeditationScreen extends HookConsumerWidget {
 
           // ── Completion button ─────────────────────────────────────────
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pushReplacement(
+              PageRouteBuilder<void>(
+                pageBuilder: (_, __, ___) =>
+                    const MorningTransitionScreen(),
+                transitionsBuilder: (_, anim, __, child) =>
+                    FadeTransition(opacity: anim, child: child),
+                transitionDuration: const Duration(milliseconds: 700),
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(56),
               backgroundColor: Colors.indigo.shade800,

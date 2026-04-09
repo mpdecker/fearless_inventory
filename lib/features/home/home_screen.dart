@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/database/database.dart';
 import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/widgets/app_dialogs.dart';
 
 // Feature Imports
-import '../review/daily_review_hub_screen.dart';
+import '../review/daily_review_screen.dart';
+import '../review/review_history_screen.dart';
+import '../review/review_type.dart';
+import '../review/providers/review_providers.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import '../amends/amends_list_screen.dart';
@@ -283,7 +289,7 @@ class _HomeDashboardView extends StatelessWidget {
         _buildSectionHeader("DAILY MAINTENANCE"),
         _buildActionCard(
           context: context,
-          title: "Step 11: Morning Meditation",
+          title: "Morning Meditation",
           subtitle: "Seeking through prayer & meditation",
           icon: Icons.wb_sunny_outlined,
           color: Colors.orange.shade800,
@@ -294,18 +300,19 @@ class _HomeDashboardView extends StatelessWidget {
         ),
         _buildActionCard(
           context: context,
-          title: "Step 10: Evening Review",
-          subtitle: "Continued to take personal inventory",
-          icon: Icons.nightlight_round_outlined,
-          color: Colors.indigo.shade800,
+          title: "Step 10 Spot Check",
+          subtitle: "Log an event — pause, reflect, reset",
+          icon: Icons.track_changes_outlined,
+          color: const Color(0xFF00695C),
           onTap: () => Navigator.push(
             context,
-            adaptivePageRoute((_) => const DailyReviewHubScreen()),
+            adaptivePageRoute(
+                (_) => const DailyReviewScreen(reviewType: ReviewType.spotCheck)),
           ),
         ),
         _buildActionCard(
           context: context,
-          title: "Step 11: Bedtime Meditation",
+          title: "Nightly Meditation",
           subtitle: "Wind down — trust, gratitude, and rest",
           icon: Icons.bedtime_outlined,
           color: Colors.deepPurple.shade700,
@@ -316,7 +323,12 @@ class _HomeDashboardView extends StatelessWidget {
         ),
 
         const SizedBox(height: 16),
-        
+
+        // STEP 10 HISTORY
+        const _ReviewHistoryCard(),
+
+        const SizedBox(height: 16),
+
         // ACTIVE STEPWORK
         _buildSectionHeader("ACTIVE STEPWORK"),
         _buildActionCard(
@@ -699,6 +711,220 @@ class _MilestoneBadge extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 10 history card — shows recent reviews inline on the Dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReviewHistoryCard extends HookConsumerWidget {
+  const _ReviewHistoryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(reviewsStreamProvider);
+    final expanded = useState(false);
+
+    return reviewsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (reviews) {
+        if (reviews.isEmpty) return const SizedBox.shrink();
+
+        final recent = reviews.take(7).toList();
+        final cs = Theme.of(context).colorScheme;
+        final muted = cs.onSurface.withOpacity(0.65);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header row — tap to expand/collapse ──────────────────────
+            InkWell(
+              onTap: () => expanded.value = !expanded.value,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
+                child: Row(
+                  children: [
+                    Text(
+                      'STEP 10 HISTORY',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: muted,
+                        letterSpacing: 1.1,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (expanded.value)
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ReviewHistoryScreen()),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: cs.primary,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('View all',
+                                style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 2),
+                            Icon(Icons.chevron_right,
+                                size: 16, color: cs.primary),
+                          ],
+                        ),
+                      ),
+                    AnimatedRotation(
+                      turns: expanded.value ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Icons.expand_more,
+                          size: 20, color: muted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Collapsible list ─────────────────────────────────────────
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 220),
+              crossFadeState: expanded.value
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Card(
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: cs.outline.withOpacity(0.35)),
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < recent.length; i++) ...[
+                        if (i > 0)
+                          Divider(
+                              height: 1,
+                              indent: 16,
+                              endIndent: 16,
+                              color: Colors.grey.shade200),
+                        _ReviewRow(review: recent[i], isFirst: i == 0),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ReviewRow extends StatelessWidget {
+  final DailyReview review;
+  final bool isFirst;
+  const _ReviewRow({required this.review, required this.isFirst});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDisturbers = review.wasResentful ||
+        review.wasSelfish ||
+        review.wasDishonest ||
+        review.wasAfraid;
+    final statusColor =
+        hasDisturbers ? Colors.orange.shade700 : Colors.green.shade600;
+    final dateStr = DateFormat('EEE, MMM d').format(review.date);
+
+    return InkWell(
+      borderRadius: BorderRadius.vertical(
+        top: isFirst ? const Radius.circular(16) : Radius.zero,
+        bottom: const Radius.circular(16),
+      ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ReviewHistoryScreen()),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Icon(_typeIcon(review.reviewType),
+                size: 16, color: Colors.grey.shade400),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(dateStr,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  if (hasDisturbers)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Wrap(
+                        spacing: 4,
+                        children: [
+                          if (review.wasResentful) _dot('R'),
+                          if (review.wasSelfish) _dot('S'),
+                          if (review.wasDishonest) _dot('D'),
+                          if (review.wasAfraid) _dot('F'),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: statusColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                hasDisturbers ? 'Growth' : 'Clean',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dot(String letter) => Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: Colors.red.shade100,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        alignment: Alignment.center,
+        child: Text(letter,
+            style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade700)),
+      );
+}
+
+IconData _typeIcon(String? type) => switch (type) {
+      'morning' => Icons.wb_sunny_outlined,
+      'spot_check' => Icons.track_changes_outlined,
+      _ => Icons.bedtime_outlined,
+    };
 
 // ── Streak header ─────────────────────────────────────────────────────────────
 

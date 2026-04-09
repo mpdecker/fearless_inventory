@@ -94,7 +94,12 @@ final geocodedLocationProvider = FutureProvider<GeocodedLocation?>((ref) async {
 });
 
 /// Selected distance radius in miles. `null` = show all distances.
-final distanceRadiusMiProvider = StateProvider<double?>((ref) => null);
+/// Defaults to 100 mi so the Browse tab limits in-person meetings by default.
+final distanceRadiusMiProvider = StateProvider<double?>((ref) => 100.0);
+
+/// Whether the Search tab should apply location-based filtering.
+/// Defaults to false so Search shows all meetings worldwide out of the box.
+final searchLocationEnabledProvider = StateProvider<bool>((ref) => false);
 
 /// The active location used by the Nearby tab — either GPS or geocoded.
 ///

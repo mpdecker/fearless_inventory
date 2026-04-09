@@ -8,15 +8,89 @@ import '../../core/database/database.dart';
 import '../../data/repositories/review_repository.dart';
 import '../../data/repositories/shortcomings_repository.dart';
 import '../../core/services/notification_service.dart';
-// New imports for Step 6/7/9 integration
 import '../stepwork/defect_discovery_wizard.dart';
 import '../amends/amends_entry_screen.dart';
+import 'review_type.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Questions & labels per review context
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReviewCopy {
+  final String title;
+  final String resentfulQ;
+  final String selfishQ;
+  final String dishonestQ;
+  final String afraidQ;
+  final String notesLabel;
+  final String gratitudeLabel;
+  final String saveButton;
+  final Color accent;
+
+  const _ReviewCopy({
+    required this.title,
+    required this.resentfulQ,
+    required this.selfishQ,
+    required this.dishonestQ,
+    required this.afraidQ,
+    required this.notesLabel,
+    required this.gratitudeLabel,
+    required this.saveButton,
+    required this.accent,
+  });
+}
+
+_ReviewCopy _copyFor(ReviewType type) => switch (type) {
+      ReviewType.morning => const _ReviewCopy(
+          title: 'Morning 10th Step',
+          resentfulQ: 'Am I carrying resentment into today?',
+          selfishQ: 'Am I entering the day with self-seeking motives?',
+          dishonestQ: 'Is there anything dishonest about my plans today?',
+          afraidQ: 'Am I starting today with fear?',
+          notesLabel: 'Intentions & prayers for today',
+          gratitudeLabel: 'What am I grateful for as I begin today?',
+          saveButton: 'Begin My Day',
+          accent: Color(0xFFE65100), // deep orange
+        ),
+      ReviewType.spotCheck => const _ReviewCopy(
+          title: 'Spot Check',
+          resentfulQ: 'Am I being resentful right now?',
+          selfishQ: 'Am I acting selfishly or self-seeking?',
+          dishonestQ: 'Am I being dishonest in this situation?',
+          afraidQ: 'Am I acting out of fear?',
+          notesLabel: 'What happened? What was my part?',
+          gratitudeLabel: 'What can I do differently?',
+          saveButton: 'Log This Event',
+          accent: Color(0xFF00695C), // teal
+        ),
+      ReviewType.nightly => const _ReviewCopy(
+          title: 'Nightly 10th Step',
+          resentfulQ: 'Was I resentful today?',
+          selfishQ: 'Was I selfish today?',
+          dishonestQ: 'Was I dishonest today?',
+          afraidQ: 'Was I afraid today?',
+          notesLabel: 'Notes / Amends needed',
+          gratitudeLabel: 'What am I grateful for today?',
+          saveButton: 'Complete Review',
+          accent: Color(0xFF283593), // deep indigo
+        ),
+    };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screen
+// ─────────────────────────────────────────────────────────────────────────────
 
 class DailyReviewScreen extends HookConsumerWidget {
-  const DailyReviewScreen({super.key});
+  final ReviewType reviewType;
+  const DailyReviewScreen({
+    super.key,
+    this.reviewType = ReviewType.nightly,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final copy = _copyFor(reviewType);
+
     final wasResentful = useState(false);
     final wasSelfish = useState(false);
     final wasDishonest = useState(false);
@@ -24,51 +98,50 @@ class DailyReviewScreen extends HookConsumerWidget {
     final notesController = useTextEditingController();
     final gratitudeController = useTextEditingController();
 
-    // Helper to show the Step 7 Shortcoming logging dialog
-    void _showShortcomingLogger(BuildContext context, int reviewId) {
+    void _showShortcomingLogger(BuildContext ctx, int reviewId) {
       final logController = TextEditingController(text: notesController.text);
       showDialog(
-        context: context,
+        context: ctx,
         builder: (dialogContext) => AlertDialog(
-          title: const Text("Log Shortcoming"),
+          title: const Text('Log Shortcoming'),
           content: TextField(
             controller: logController,
             maxLines: 3,
             decoration: const InputDecoration(
-              hintText: "Briefly describe the shortcoming instance...",
+              hintText: 'Briefly describe the shortcoming instance...',
               border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Cancel"),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () async {
                 await ref.read(shortcomingRepositoryProvider).insert(
-                  ShortcomingLogsCompanion(
-                    description: Value(logController.text),
-                    dateObserved: Value(DateTime.now()),
-                    relatedReviewId: Value(reviewId),
-                  ),
-                );
+                      ShortcomingLogsCompanion(
+                        description: Value(logController.text),
+                        dateObserved: Value(DateTime.now()),
+                        relatedReviewId: Value(reviewId),
+                      ),
+                    );
                 if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext); // Close Dialog
-                  Navigator.pop(context); // Return to Home
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(ctx);
                 }
               },
-              child: const Text("Log & Finish"),
+              child: const Text('Log & Finish'),
             ),
           ],
         ),
       );
     }
 
-    // Helper to show the growth opportunity modal
-    void _showSignalFollowUp(BuildContext context, int reviewId) {
+    void _showSignalFollowUp(BuildContext ctx, int reviewId) {
+      final isSpotCheck = reviewType == ReviewType.spotCheck;
       showModalBottomSheet(
-        context: context,
+        context: ctx,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -78,40 +151,49 @@ class DailyReviewScreen extends HookConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Growth Opportunity",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                'Growth Opportunity',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
-              const Text("You identified some inventory items tonight. How would you like to proceed?"),
+              Text(
+                isSpotCheck
+                    ? 'You spotted something in this situation. How would you like to proceed?'
+                    : 'You identified some inventory items today. How would you like to proceed?',
+              ),
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.auto_awesome, color: Colors.indigo),
-                title: const Text("Run Discovery Wizard"),
-                subtitle: const Text("Translate these into character defects (Step 6)"),
+                title: const Text('Run Discovery Wizard'),
+                subtitle:
+                    const Text('Translate these into character defects (Step 6)'),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Navigator.pushReplacement(
-                    context,
+                    ctx,
                     adaptivePageRoute((_) => const DefectDiscoveryWizard()),
                   );
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.self_improvement, color: Colors.teal),
-                title: const Text("Log a Shortcoming"),
-                subtitle: const Text("Track this instance for Step 7 prayer"),
+                leading:
+                    const Icon(Icons.self_improvement, color: Colors.teal),
+                title: const Text('Log a Shortcoming'),
+                subtitle: const Text('Track this instance for Step 7 prayer'),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  _showShortcomingLogger(context, reviewId);
+                  _showShortcomingLogger(ctx, reviewId);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.handshake_outlined, color: Colors.deepOrange),
-                title: const Text("Plan an Amends"),
-                subtitle: const Text("Add a Step 9 amends plan for harm done"),
+                leading: const Icon(Icons.handshake_outlined,
+                    color: Colors.deepOrange),
+                title: const Text('Plan an Amends'),
+                subtitle: const Text('Add a Step 9 amends plan for harm done'),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   Navigator.push(
-                    context,
+                    ctx,
                     adaptivePageRoute((_) => const AmendsEntryScreen()),
                   );
                 },
@@ -121,11 +203,11 @@ class DailyReviewScreen extends HookConsumerWidget {
                 child: TextButton(
                   onPressed: () {
                     Navigator.pop(sheetContext);
-                    Navigator.pop(context); // Return to Home
+                    Navigator.pop(ctx);
                   },
-                  child: const Text("Just Save & Finish"),
+                  child: const Text('Just Save & Finish'),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -134,19 +216,21 @@ class DailyReviewScreen extends HookConsumerWidget {
 
     Future<void> saveReview() async {
       final repo = ref.read(reviewRepositoryProvider);
-      
+      final now = DateTime.now();
+
       final reviewId = await repo.insertReview(DailyReviewsCompanion(
-        date: Value(DateTime.now()),
+        date: Value(now),
         wasResentful: Value(wasResentful.value),
         wasSelfish: Value(wasSelfish.value),
         wasDishonest: Value(wasDishonest.value),
         wasAfraid: Value(wasAfraid.value),
         notes: Value(notesController.text),
         gratitude: Value(gratitudeController.text),
-        createdAt: Value(DateTime.now()),
+        reviewType: Value(reviewType.dbValue),
+        createdAt: Value(now),
       ));
 
-      // Reschedule daily review only (do not cancel bedtime meditation id 102)
+      // Reschedule daily review notification
       final notifications = NotificationService();
       await notifications.cancelNotification(NotificationService.idDailyReview);
       await notifications.scheduleDailyReviewReminder(
@@ -159,39 +243,45 @@ class DailyReviewScreen extends HookConsumerWidget {
       );
 
       if (context.mounted) {
-        // STEP 10 SIGNAL INTEGRATION:
-        // Check if any negative traits were flagged
-        final hasSignals = wasResentful.value || wasSelfish.value || 
-                           wasDishonest.value || wasAfraid.value;
+        final hasSignals = wasResentful.value ||
+            wasSelfish.value ||
+            wasDishonest.value ||
+            wasAfraid.value;
 
-        if (hasSignals) {
-          _showSignalFollowUp(context, reviewId);
-        } else {
+        // Morning reviews: just save — no signal follow-up
+        if (reviewType == ReviewType.morning || !hasSignals) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('10th Step Review Saved')),
+            SnackBar(content: Text('${copy.title} saved')),
           );
+        } else {
+          _showSignalFollowUp(context, reviewId);
         }
       }
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily 10th Step')),
+      appBar: AppBar(
+        title: Text(copy.title),
+        backgroundColor: copy.accent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            _buildToggleItem("Was I resentful today?", wasResentful),
-            _buildToggleItem("Was I selfish today?", wasSelfish),
-            _buildToggleItem("Was I dishonest today?", wasDishonest),
-            _buildToggleItem("Was I afraid today?", wasAfraid),
+            _buildToggleItem(copy.resentfulQ, wasResentful, copy.accent),
+            _buildToggleItem(copy.selfishQ, wasSelfish, copy.accent),
+            _buildToggleItem(copy.dishonestQ, wasDishonest, copy.accent),
+            _buildToggleItem(copy.afraidQ, wasAfraid, copy.accent),
             const SizedBox(height: 24),
             TextField(
               controller: notesController,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: "Notes / Amends needed",
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: copy.notesLabel,
+                border: const OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.sentences,
             ),
@@ -199,9 +289,9 @@ class DailyReviewScreen extends HookConsumerWidget {
             TextField(
               controller: gratitudeController,
               maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: "What am I grateful for?",
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: copy.gratitudeLabel,
+                border: const OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.sentences,
             ),
@@ -210,11 +300,12 @@ class DailyReviewScreen extends HookConsumerWidget {
               onPressed: saveReview,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(56),
-                backgroundColor: Colors.indigo.shade600,
+                backgroundColor: copy.accent,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Complete Review'),
+              child: Text(copy.saveButton),
             ),
           ],
         ),
@@ -222,11 +313,12 @@ class DailyReviewScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildToggleItem(String title, ValueNotifier<bool> state) {
+  Widget _buildToggleItem(
+      String title, ValueNotifier<bool> state, Color accent) {
     return SwitchListTile(
       title: Text(title),
       value: state.value,
-      activeColor: Colors.indigo,
+      activeColor: accent,
       onChanged: (val) => state.value = val,
     );
   }

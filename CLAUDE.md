@@ -30,7 +30,7 @@ After any change to `lib/core/database/database.dart`, run `build_runner build` 
 
 ### Data Layer: Drift ORM + Repository Pattern
 
-- **Schema**: `lib/core/database/database.dart` (currently v9 — bump version and add migration when changing tables)
+- **Schema**: `lib/core/database/database.dart` (currently v14 — bump version and add migration when changing tables)
 - **Generated code**: `lib/core/database/database.g.dart` (do not edit manually)
 - **Repositories**: `lib/data/repositories/` — one per domain (inventory, meetings, amends, etc.)
 - **Encryption**: SQLCipher via `KeyService`; sobriety date stored in Flutter Secure Storage
@@ -46,13 +46,26 @@ Key domain areas:
 - **amends** — Steps 8–9 amends planning and execution
 - **meetings** — Meeting Finder using AA Meeting Guide / NA APIs with attendance logs
 - **insights** — Recovery metrics, trends, meditation history
+- **journal** — Step/tradition journal with AI-assisted prompts (`lib/features/journal/`)
+- **settings** — App settings including in-app literature reader (`lib/features/settings/`)
+
+### Auth & App Lock
+
+Two separate auth layers exist:
+
+- **PIN / Biometric lock** — local, always-on. `PinService` stores the hashed PIN in Flutter Secure Storage; `BiometricService` wraps `local_auth`. State is managed by `AppLockNotifier` (`lib/core/providers/app_lock_provider.dart`). The app locks after 5 minutes in the background and re-requires the PIN/biometric.
+- **Firebase Auth** — optional cloud identity (email/password, Google, Apple). `FirebaseAuthService` (`lib/core/services/firebase_auth_service.dart`) and stream providers in `lib/core/providers/auth_provider.dart`. Firebase is used **only** for identity; all recovery content stays on-device. Firebase is currently commented out in `main.dart` — run `flutterfire configure` and uncomment to activate.
+- **Auth screens** live in `lib/features/auth/screens/`: `AppLockScreen`, `PinSetupScreen`, `LoginScreen`, `RegisterScreen`, `ForgotPasswordScreen`, `AccountScreen`.
 
 ### App Initialization (`main.dart`)
 
-Before the widget tree is built, three things are initialized synchronously:
+Before the widget tree is built, four things are initialized:
 1. Per-device encryption key (`KeyService`)
 2. First-run onboarding flag (`OnboardingService`)
-3. Notification schedules — daily review at 21:00, bedtime meditation at 22:30 (`NotificationService`)
+3. App-lock state (PIN + biometric) — seeded directly into `appLockProvider` to avoid a loading flicker
+4. Notification schedules — daily review at 21:00, bedtime meditation at 22:30 (`NotificationService`)
+
+Root routing decision (`_RootRouter`): Onboarding → PIN setup (first time) → Lock screen → HomeScreen.
 
 ### Database Schema Notes
 

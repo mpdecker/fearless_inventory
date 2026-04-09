@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,6 +156,78 @@ class ReflectionService {
         themeWeights: _signalsToWeights(activeSignals),
         recentKeys: recentKeys,
         extraThemes: _bedtimeCalmThemes,
+      );
+
+  // ── Testable pure selection (no asset I/O) ──────────────────────────────────
+
+  /// Runs the weighted random selection on a caller-supplied [rows] list.
+  ///
+  /// Identical logic to [selectWeighted] but skips the asset load, making it
+  /// suitable for unit tests.  [now] defaults to [DateTime.now()].
+  @visibleForTesting
+  static Reflection? pickFromRows(
+    List<Map<String, dynamic>> rows,
+    Map<String, double> themeWeights,
+    Map<String, DateTime> recentKeys, {
+    List<String> extraThemes = const [],
+    DateTime? now,
+    Random? random,
+  }) {
+    if (rows.isEmpty) return null;
+
+    final ref = now ?? DateTime.now();
+    final rng = random ?? Random();
+
+    final targetThemes = <String>{
+      ...themeWeights.keys,
+      ...extraThemes,
+    };
+    if (targetThemes.isEmpty) targetThemes.addAll(_defaultThemes);
+
+    var candidates =
+        rows.where((r) => targetThemes.contains(r['theme'])).toList();
+    if (candidates.isEmpty) candidates = rows;
+    if (candidates.isEmpty) return null;
+
+    final weights = <double>[];
+    for (final row in candidates) {
+      final theme = row['theme'] as String;
+      final quote = row['quote'] as String;
+      final key   = quote.length > 80 ? quote.substring(0, 80) : quote;
+
+      double w = themeWeights[theme] ?? 1.0;
+
+      if (recentKeys.containsKey(key)) {
+        final ageDays = ref.difference(recentKeys[key]!).inDays;
+        if (ageDays < 2) {
+          w *= 0.05;
+        } else if (ageDays < 5) {
+          w *= 0.30;
+        } else if (ageDays < 10) {
+          w *= 0.70;
+        }
+      }
+      weights.add(w.clamp(0, double.infinity));
+    }
+
+    final total = weights.fold<double>(0, (a, b) => a + b);
+    if (total <= 0) {
+      return _toReflectionStatic(candidates[rng.nextInt(candidates.length)]);
+    }
+
+    final dart = rng.nextDouble() * total;
+    double cumulative = 0;
+    for (int i = 0; i < candidates.length; i++) {
+      cumulative += weights[i];
+      if (dart <= cumulative) return _toReflectionStatic(candidates[i]);
+    }
+    return _toReflectionStatic(candidates.last);
+  }
+
+  static Reflection _toReflectionStatic(Map<String, dynamic> row) => Reflection(
+        theme:      row['theme']      as String,
+        quote:      row['quote']      as String,
+        reflection: row['reflection'] as String,
       );
 
   // ── Internal helpers ────────────────────────────────────────────────────────

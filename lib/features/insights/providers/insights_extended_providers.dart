@@ -2,6 +2,9 @@ import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../core/database/database.dart';
 import '../../../core/providers/sobriety_provider.dart';
+import '../../../data/repositories/sponsor_call_repository.dart';
+import '../../../data/repositories/review_repository.dart';
+import '../../review/review_type.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Journal insights
@@ -376,3 +379,265 @@ SobrietyMilestone _computeMilestone(int days) {
     progressToNext: progress,
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sponsor call insights
+// ─────────────────────────────────────────────────────────────────────────────
+
+class SponsorCallInsights {
+  /// Calls logged in the last 7 days.
+  final int callsThisWeek;
+
+  /// Calls logged in the 7 days before that (days 8–14 ago).
+  final int callsLastWeek;
+
+  /// Calls logged in the last 28 days.
+  final int callsLast4Weeks;
+
+  /// How many consecutive weeks (ending today) had at least one logged call.
+  final int weekStreak;
+
+  /// The most recent confirmed call time, or null if no calls have been logged.
+  final DateTime? lastCallAt;
+
+  const SponsorCallInsights({
+    required this.callsThisWeek,
+    required this.callsLastWeek,
+    required this.callsLast4Weeks,
+    required this.weekStreak,
+    this.lastCallAt,
+  });
+
+  bool get hasCalls => callsLast4Weeks > 0;
+}
+
+final sponsorCallInsightsProvider =
+    FutureProvider.autoDispose<SponsorCallInsights>((ref) async {
+  final repo = ref.watch(sponsorCallRepositoryProvider);
+  final now = DateTime.now();
+
+  // Fetch enough history to calculate a 12-week streak ceiling.
+  final logs = await repo.getRecentLogs(84); // 12 weeks
+
+  final thisWeekCutoff = now.subtract(const Duration(days: 7));
+  final lastWeekCutoff = now.subtract(const Duration(days: 14));
+  final month4Cutoff = now.subtract(const Duration(days: 28));
+
+  final callsThisWeek =
+      logs.where((l) => l.confirmedAt.isAfter(thisWeekCutoff)).length;
+  final callsLastWeek = logs
+      .where((l) =>
+          l.confirmedAt.isAfter(lastWeekCutoff) &&
+          !l.confirmedAt.isAfter(thisWeekCutoff))
+      .length;
+  final callsLast4Weeks =
+      logs.where((l) => l.confirmedAt.isAfter(month4Cutoff)).length;
+
+  final lastCallAt = logs.isEmpty ? null : logs.first.confirmedAt;
+
+  // Consecutive-week streak: walk backwards week by week from the current week.
+  int streak = 0;
+  for (int week = 0; week < 12; week++) {
+    final weekEnd = now.subtract(Duration(days: week * 7));
+    final weekStart = now.subtract(Duration(days: (week + 1) * 7));
+    final hasCall =
+        logs.any((l) => l.confirmedAt.isAfter(weekStart) && !l.confirmedAt.isAfter(weekEnd));
+    if (hasCall) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return SponsorCallInsights(
+    callsThisWeek: callsThisWeek,
+    callsLastWeek: callsLastWeek,
+    callsLast4Weeks: callsLast4Weeks,
+    weekStreak: streak,
+    lastCallAt: lastCallAt,
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 10 reviews by time-of-day context (last 30 days)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class Step10TypeInsights {
+  final int morningCount;
+  final int spotCheckCount;
+  final int nightlyCount;
+
+  /// % of each type that flagged at least one disturber signal.
+  final double morningSignalRate;   // 0.0 – 1.0
+  final double spotCheckSignalRate;
+  final double nightlySignalRate;
+
+  /// Total reviews in the window.
+  final int totalCount;
+
+  const Step10TypeInsights({
+    required this.morningCount,
+    required this.spotCheckCount,
+    required this.nightlyCount,
+    required this.morningSignalRate,
+    required this.spotCheckSignalRate,
+    required this.nightlySignalRate,
+    required this.totalCount,
+  });
+
+  bool get hasData => totalCount > 0;
+}
+
+double _signalRate(List<DailyReview> reviews) {
+  if (reviews.isEmpty) return 0.0;
+  final withSignal = reviews.where((r) =>
+      r.wasResentful || r.wasSelfish || r.wasDishonest || r.wasAfraid).length;
+  return withSignal / reviews.length;
+}
+
+final step10TypeInsightsProvider =
+    FutureProvider.autoDispose<Step10TypeInsights>((ref) async {
+  final repo = ref.watch(reviewRepositoryProvider);
+
+  final results = await Future.wait([
+    repo.getRecentByType(ReviewType.morning,    30),
+    repo.getRecentByType(ReviewType.spotCheck,  30),
+    repo.getRecentByType(ReviewType.nightly,    30),
+  ]);
+
+  final morning    = results[0];
+  final spotCheck  = results[1];
+  final nightly    = results[2];
+
+  return Step10TypeInsights(
+    morningCount:      morning.length,
+    spotCheckCount:    spotCheck.length,
+    nightlyCount:      nightly.length,
+    morningSignalRate:    _signalRate(morning),
+    spotCheckSignalRate:  _signalRate(spotCheck),
+    nightlySignalRate:    _signalRate(nightly),
+    totalCount:        morning.length + spotCheck.length + nightly.length,
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recovery pillars — which of the 6 core tools were used in the last 7 days
+// ─────────────────────────────────────────────────────────────────────────────
+
+class WeeklyPillars {
+  final bool didReview;
+  final bool didMeditation;
+  final bool didMeeting;
+  final bool didJournal;
+  final bool didSponsorCall;
+  final bool didService; // active commitment or a 12th-step call this week
+
+  const WeeklyPillars({
+    required this.didReview,
+    required this.didMeditation,
+    required this.didMeeting,
+    required this.didJournal,
+    required this.didSponsorCall,
+    required this.didService,
+  });
+
+  int get activeCount => [
+        didReview,
+        didMeditation,
+        didMeeting,
+        didJournal,
+        didSponsorCall,
+        didService,
+      ].where((b) => b).length;
+}
+
+final weeklyPillarsProvider =
+    FutureProvider.autoDispose<WeeklyPillars>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final cutoff = DateTime.now().subtract(const Duration(days: 7));
+
+  final results = await Future.wait([
+    db.select(db.dailyReviews).get(),
+    db.select(db.meditationSessions).get(),
+    db.select(db.attendanceLogs).get(),
+    db.select(db.journalEntries).get(),
+    db.select(db.sponsorCallLogs).get(),
+    db.select(db.twelfthStepCalls).get(),
+    db.select(db.serviceCommitments).get(),
+  ]);
+
+  final reviews      = results[0] as List<DailyReview>;
+  final meditations  = results[1] as List<MeditationSession>;
+  final attendance   = results[2] as List<AttendanceLog>;
+  final journal      = results[3] as List<JournalEntry>;
+  final sponsorCalls = results[4] as List<SponsorCallLog>;
+  final stepCalls    = results[5] as List<TwelfthStepCall>;
+  final commitments  = results[6] as List<ServiceCommitment>;
+
+  return WeeklyPillars(
+    didReview:      reviews.any((r) => r.createdAt.isAfter(cutoff)),
+    didMeditation:  meditations.any((s) => s.completedAt.isAfter(cutoff)),
+    didMeeting:     attendance.any((a) => a.attendedAt.isAfter(cutoff)),
+    didJournal:     journal.any((j) => j.createdAt.isAfter(cutoff)),
+    didSponsorCall: sponsorCalls.any((c) => c.confirmedAt.isAfter(cutoff)),
+    didService:     stepCalls.any((c) => c.occurredAt.isAfter(cutoff)) ||
+                    commitments.any((c) => c.isActive),
+  );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Meeting momentum — this month vs prior month
+// ─────────────────────────────────────────────────────────────────────────────
+
+class MeetingMomentum {
+  final int thisMonth;
+  final int priorMonth;
+
+  const MeetingMomentum({required this.thisMonth, required this.priorMonth});
+
+  int get delta => thisMonth - priorMonth;
+  bool get isGrowing => thisMonth > priorMonth;
+  bool get hasEnoughData => thisMonth + priorMonth >= 4;
+}
+
+final meetingMomentumProvider =
+    FutureProvider.autoDispose<MeetingMomentum>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final now = DateTime.now();
+  final cutoff30 = now.subtract(const Duration(days: 30));
+  final cutoff60 = now.subtract(const Duration(days: 60));
+
+  final logs = await db.select(db.attendanceLogs).get();
+  final thisMonth = logs
+      .where((l) => l.attendedAt.isAfter(cutoff30))
+      .length;
+  final priorMonth = logs
+      .where((l) =>
+          l.attendedAt.isAfter(cutoff60) && !l.attendedAt.isAfter(cutoff30))
+      .length;
+
+  return MeetingMomentum(thisMonth: thisMonth, priorMonth: priorMonth);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fear work — inventory depth and myPart completion
+// ─────────────────────────────────────────────────────────────────────────────
+
+class FearInsights {
+  final int total;
+  final int withMyPart; // fears with a non-empty "my part" column
+
+  const FearInsights({required this.total, required this.withMyPart});
+
+  bool get hasAny => total > 0;
+  int get pctWorked =>
+      total == 0 ? 0 : ((withMyPart / total) * 100).round();
+}
+
+final fearInsightsProvider =
+    FutureProvider.autoDispose<FearInsights>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final fears = await db.select(db.fears).get();
+  final withMyPart = fears.where((f) => f.myPart.trim().isNotEmpty).length;
+  return FearInsights(total: fears.length, withMyPart: withMyPart);
+});
