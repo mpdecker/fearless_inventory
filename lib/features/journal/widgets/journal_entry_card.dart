@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/database/database.dart';
-import '../data/step_tradition_content.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers
@@ -19,14 +19,14 @@ String _contextLabel(JournalEntry entry) {
 Color _contextColor(JournalEntry entry) {
   if (entry.stepNumber != null) {
     final n = entry.stepNumber!;
-    if (n <= 3) return const Color(0xFF3F51B5);  // Indigo — Steps 1–3
-    if (n <= 9) return const Color(0xFFE65100);  // Deep orange — Steps 4–9
-    return const Color(0xFF00695C);              // Dark teal — Steps 10–12
+    if (n <= 3) return AppColors.indigoPrimary;
+    if (n <= 9) return AppColors.accentDeepOrange;
+    return AppColors.cyanSecondary;
   }
   if (entry.traditionNumber != null) {
-    return const Color(0xFF6A1B9A);              // Deep purple — Traditions
+    return AppColors.accentDeepPurple;
   }
-  return Colors.blueGrey;
+  return AppColors.meetingChipOtherBorder;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

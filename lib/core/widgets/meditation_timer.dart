@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+
+import '../theme/app_colors.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -18,7 +20,7 @@ class MeditationTimerWidget extends HookConsumerWidget {
   const MeditationTimerWidget({
     super.key,
     required this.onSave,
-    this.accentColor = const Color(0xFF3949AB), // indigo-700
+    this.accentColor = AppColors.indigoPrimary,
   });
 
   @override

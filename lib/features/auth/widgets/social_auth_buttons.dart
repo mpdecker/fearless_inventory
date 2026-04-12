@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Divider with label
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +78,7 @@ class SignInWithGoogleButton extends StatelessWidget {
     return _SocialButton(
       onPressed: onPressed,
       isLoading: isLoading,
-      backgroundColor: const Color(0xFF1F1F1F),
+      backgroundColor: AppColors.card,
       foregroundColor: Colors.white,
       icon: const _GoogleIcon(),
       label: 'Sign in with Google',
@@ -179,7 +181,7 @@ class _GoogleIcon extends StatelessWidget {
         child: Text(
           'G',
           style: TextStyle(
-            color: Color(0xFF4285F4),
+            color: AppColors.accentBlue,
             fontWeight: FontWeight.bold,
             fontSize: 13,
           ),

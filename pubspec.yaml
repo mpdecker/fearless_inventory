@@ -1,5 +1,5 @@
 name: fearless_inventory
-description: A recovery companion app for detailed stepwork and daily inventory.
+description: Fearless Inventory — continuous stepwork, daily inventory, and twelve-step recovery tools. Private and encrypted on-device.
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -89,6 +89,9 @@ dev_dependencies:
   # Linting
   flutter_lints: ^3.0.0
 
+  # App launcher icons (Android mipmaps + iOS AppIcon.appiconset)
+  flutter_launcher_icons: ^0.14.3
+
   # Mocking for unit / widget tests
   mocktail: ^1.0.4
 
@@ -97,3 +100,15 @@ flutter:
 
   assets:
     - assets/data/
+    - assets/branding/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/icon_light.png
+  min_sdk_android: 21
+  # iOS 18+ alternate appearances (dark home screen / tinted)
+  image_path_ios_dark_transparent: assets/branding/icon_dark.png
+  image_path_ios_tinted_grayscale: assets/branding/icon_tinted.png
+  desaturate_tinted_to_grayscale_ios: true
+  remove_alpha_ios: true

@@ -4,6 +4,7 @@ import '../../core/navigation/adaptive_page_route.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../data/repositories/review_repository.dart';
 import '../../data/repositories/shortcomings_repository.dart';
@@ -50,7 +51,7 @@ _ReviewCopy _copyFor(ReviewType type) => switch (type) {
           notesLabel: 'Intentions & prayers for today',
           gratitudeLabel: 'What am I grateful for as I begin today?',
           saveButton: 'Begin My Day',
-          accent: Color(0xFFE65100), // deep orange
+          accent: AppColors.accentDeepOrange,
         ),
       ReviewType.spotCheck => const _ReviewCopy(
           title: 'Spot Check',
@@ -61,7 +62,7 @@ _ReviewCopy _copyFor(ReviewType type) => switch (type) {
           notesLabel: 'What happened? What was my part?',
           gratitudeLabel: 'What can I do differently?',
           saveButton: 'Log This Event',
-          accent: Color(0xFF00695C), // teal
+          accent: AppColors.cyanSecondary,
         ),
       ReviewType.nightly => const _ReviewCopy(
           title: 'Nightly 10th Step',
@@ -72,7 +73,7 @@ _ReviewCopy _copyFor(ReviewType type) => switch (type) {
           notesLabel: 'Notes / Amends needed',
           gratitudeLabel: 'What am I grateful for today?',
           saveButton: 'Complete Review',
-          accent: Color(0xFF283593), // deep indigo
+          accent: AppColors.indigoPrimary,
         ),
     };
 

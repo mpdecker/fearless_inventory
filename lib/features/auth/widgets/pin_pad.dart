@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_colors.dart';
 import 'package:flutter/services.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,7 +166,7 @@ class _DigitButton extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             customBorder: const CircleBorder(),
-            splashColor: Colors.tealAccent.withOpacity(0.2),
+            splashColor: AppColors.brightCyan.withOpacity(0.2),
             child: Center(
               child: Text(
                 label,

@@ -10,6 +10,7 @@ import 'core/services/key_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/onboarding_service.dart';
 import 'core/services/pin_service.dart';
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/app_lock_screen.dart';
 import 'features/auth/screens/pin_setup_screen.dart';
@@ -29,7 +30,7 @@ void main() async {
     const SystemUiOverlayStyle(
       statusBarBrightness: Brightness.dark,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF12121F),
+      systemNavigationBarColor: AppColors.scaffold,
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
@@ -204,9 +205,9 @@ class _RootRouter extends ConsumerWidget {
     // Should resolve instantly (state was seeded in main()), but guard anyway.
     if (lockState.isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF12121F),
+        backgroundColor: AppColors.scaffold,
         body: Center(
-          child: CircularProgressIndicator(color: Colors.tealAccent),
+          child: CircularProgressIndicator(color: AppColors.cyanSecondary),
         ),
       );
     }

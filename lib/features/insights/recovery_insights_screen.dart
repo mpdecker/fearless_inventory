@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/theme/app_colors.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../review/providers/insight_provider.dart';
@@ -1121,14 +1123,13 @@ class _InsightCardWidget extends StatelessWidget {
   Color _accentFor(InsightLevel level) {
     switch (level) {
       case InsightLevel.encouraging:
-        return Colors.teal;
+        return AppColors.cyanSecondary;
       case InsightLevel.neutral:
-        return Colors.blueGrey;
+        return AppColors.meetingChipOtherBorder;
       case InsightLevel.reflective:
-        return Colors.deepPurple;
+        return AppColors.accentDeepPurple;
       case InsightLevel.gentle:
-        // Warm amber — inviting, never alarming
-        return const Color(0xFFB45309);
+        return AppColors.dashboardAmber;
     }
   }
 }

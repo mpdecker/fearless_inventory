@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/app_lock_provider.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/pin_service.dart';
@@ -220,7 +221,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF12121F),
+      backgroundColor: AppColors.scaffold,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -334,7 +335,7 @@ class _DataWipedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: const Color(0xFF12121F),
+      backgroundColor: AppColors.scaffold,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(32),

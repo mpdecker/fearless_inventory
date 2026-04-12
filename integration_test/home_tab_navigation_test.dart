@@ -65,7 +65,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Recovery Companion'), findsOneWidget);
+    expect(find.bySemanticsLabel('Fearless Inventory'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
 
     Future<void> tap(String label) async {
@@ -88,6 +88,6 @@ void main() {
     expect(find.text('Recovery Insights'), findsOneWidget);
 
     await tap('Dashboard');
-    expect(find.text('Recovery Companion'), findsOneWidget);
+    expect(find.bySemanticsLabel('Fearless Inventory'), findsOneWidget);
   });
 }

@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/providers/auth_provider.dart';
@@ -100,7 +101,7 @@ class SettingsScreen extends ConsumerWidget {
           // ── Journal PDF ────────────────────────────────────────────────
           ListTile(
             leading:
-                const Icon(Icons.menu_book_outlined, color: Colors.indigoAccent),
+                const Icon(Icons.menu_book_outlined, color: AppColors.lightIndigo),
             title: const Text('Export Recovery Journal (PDF)'),
             subtitle: const Text(
                 'All journal entries formatted as a personal journal — '
@@ -114,7 +115,7 @@ class SettingsScreen extends ConsumerWidget {
           // ── Big Book ───────────────────────────────────────────────────
           ListTile(
             leading: const Icon(Icons.auto_stories_outlined,
-                color: Color(0xFF1A56DB)),
+                color: AppColors.literatureLink),
             title: const Text('The Big Book'),
             subtitle: const Text(
                 'Alcoholics Anonymous — chapter navigator with bookmarks'),
@@ -126,7 +127,7 @@ class SettingsScreen extends ConsumerWidget {
           // ── 12 & 12 ────────────────────────────────────────────────────
           ListTile(
             leading: const Icon(Icons.menu_book_outlined,
-                color: Color(0xFF6D28D9)),
+                color: AppColors.literatureLinkVisited),
             title: const Text('Twelve Steps and Twelve Traditions'),
             subtitle: const Text(
                 'The "12 & 12" — step and tradition chapters with bookmarks'),
@@ -710,7 +711,7 @@ class _SponsorCallReminderTile extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E2E),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

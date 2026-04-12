@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../core/widgets/app_dialogs.dart';
 import '../../core/navigation/adaptive_page_route.dart';
@@ -22,10 +23,10 @@ import 'providers/step12_providers.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum Step12EventType {
-  general('general', 'General', Color(0xFF607D8B)),
-  meeting('meeting', 'Meeting', Color(0xFFE65100)),
-  service('service', 'Service', Color(0xFF00695C)),
-  sponsee('sponsee', 'Sponsee', Color(0xFF6A1B9A));
+  general('general', 'General', AppColors.meetingChipOtherBorder),
+  meeting('meeting', 'Meeting', AppColors.accentDeepOrange),
+  service('service', 'Service', AppColors.cyanSecondary),
+  sponsee('sponsee', 'Sponsee', AppColors.accentDeepPurple);
 
   final String value;
   final String label;
@@ -449,7 +450,7 @@ class _PlannedMeetingTile extends StatelessWidget {
   // ignore: prefer_const_constructors_in_immutables
   _PlannedMeetingTile({required this.item, required this.ref});
 
-  static const _meetingColor = Color(0xFFE65100); // orange
+  static const _meetingColor = AppColors.accentDeepOrange;
 
   @override
   Widget build(BuildContext context) {
@@ -1560,9 +1561,9 @@ class _ServiceTab extends HookConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum ServiceCommitmentType {
-  position('position', 'Service Position', Color(0xFF00695C), Icons.stars_outlined),
-  speaking('speaking', 'Speaking', Color(0xFF1565C0), Icons.record_voice_over_outlined),
-  general('general', 'General Service', Color(0xFF6A1B9A), Icons.volunteer_activism_outlined);
+  position('position', 'Service Position', AppColors.cyanSecondary, Icons.stars_outlined),
+  speaking('speaking', 'Speaking', AppColors.lightIndigo, Icons.record_voice_over_outlined),
+  general('general', 'General Service', AppColors.accentDeepPurple, Icons.volunteer_activism_outlined);
 
   final String value;
   final String label;
@@ -2057,10 +2058,10 @@ class _CommitmentCard extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum StepCallType {
-  call('call', 'Phone Call', Color(0xFF0277BD), Icons.phone_in_talk_outlined),
-  visit('visit', 'In-Person Visit', Color(0xFF2E7D32), Icons.home_outlined),
-  sponsorship('sponsorship', 'Sponsee', Color(0xFF6A1B9A), Icons.person_outlined),
-  general('general', 'General', Color(0xFF607D8B), Icons.volunteer_activism_outlined);
+  call('call', 'Phone Call', AppColors.accentBlue, Icons.phone_in_talk_outlined),
+  visit('visit', 'In-Person Visit', AppColors.accentDeepGreen, Icons.home_outlined),
+  sponsorship('sponsorship', 'Sponsee', AppColors.accentDeepPurple, Icons.person_outlined),
+  general('general', 'General', AppColors.meetingChipOtherBorder, Icons.volunteer_activism_outlined);
 
   final String value;
   final String label;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
@@ -54,7 +55,7 @@ class Step4LandingScreen extends ConsumerWidget {
             'Sex & Harm Inventory',
             'Reviewing our own conduct.',
             Icons.people_outline,
-            Colors.teal,
+            AppColors.cyanSecondary,
             const HarmListScreen(),
           ),
 
@@ -111,7 +112,7 @@ class _Step5Card extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: const Color(0xFF1E2A44),
+      color: AppColors.ceremonySurface,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -122,11 +123,11 @@ class _Step5Card extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00BFA5).withOpacity(0.12),
+                    color: AppColors.ceremonyAccent.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.handshake_outlined,
-                      color: Color(0xFF00BFA5), size: 22),
+                      color: AppColors.ceremonyAccent, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -153,7 +154,7 @@ class _Step5Card extends StatelessWidget {
                 ),
                 if (hasCompleted)
                   const Icon(Icons.check_circle_outline,
-                      color: Color(0xFF00BFA5), size: 20),
+                      color: AppColors.ceremonyAccent, size: 20),
               ],
             ),
             const SizedBox(height: 16),
@@ -161,8 +162,8 @@ class _Step5Card extends StatelessWidget {
               width: double.infinity,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF00BFA5),
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.ceremonyAccent,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),

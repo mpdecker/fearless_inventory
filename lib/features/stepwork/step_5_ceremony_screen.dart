@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../data/repositories/inventory_repository.dart';
 import '../../data/repositories/step5_repository.dart';
@@ -84,7 +85,7 @@ class _CeremonyBody extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1429),
+      backgroundColor: AppColors.scaffold,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -104,7 +105,7 @@ class _CeremonyBody extends HookConsumerWidget {
                 child: LinearProgressIndicator(
                   value: currentPage / (_totalPages - 2),
                   backgroundColor: Colors.white12,
-                  valueColor: const AlwaysStoppedAnimation(Color(0xFF00BFA5)),
+                  valueColor: const AlwaysStoppedAnimation(AppColors.ceremonyAccent),
                 ),
               )
             : null,
@@ -208,7 +209,7 @@ class _PreparationPage extends StatelessWidget {
           const Text(
             'Step Five',
             style: TextStyle(
-              color: Color(0xFF00BFA5),
+              color: AppColors.ceremonyAccent,
               fontSize: 14,
               letterSpacing: 2,
               fontWeight: FontWeight.w600,
@@ -239,8 +240,8 @@ class _PreparationPage extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00BFA5),
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.ceremonyAccent,
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(56),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -363,12 +364,12 @@ class _InventoryReviewPage extends StatelessWidget {
                     return Container(
                       decoration: BoxDecoration(
                         color: item.flagged
-                            ? const Color(0xFF00BFA5).withOpacity(0.08)
-                            : const Color(0xFF1E2A44),
+                            ? AppColors.ceremonyAccent.withOpacity(0.08)
+                            : AppColors.ceremonySurface,
                         borderRadius: BorderRadius.circular(12),
                         border: item.flagged
                             ? Border.all(
-                                color: const Color(0xFF00BFA5).withOpacity(0.4),
+                                color: AppColors.ceremonyAccent.withOpacity(0.4),
                                 width: 1)
                             : null,
                       ),
@@ -392,7 +393,7 @@ class _InventoryReviewPage extends StatelessWidget {
                                 const Icon(
                                     Icons.supervised_user_circle_outlined,
                                     size: 16,
-                                    color: Color(0xFF00BFA5)),
+                                    color: AppColors.ceremonyAccent),
                             ],
                           ),
                           if (item.body.isNotEmpty) ...[
@@ -425,8 +426,8 @@ class _InventoryReviewPage extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00BFA5),
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.ceremonyAccent,
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -563,7 +564,7 @@ class _AdmissionsPage extends HookWidget {
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide:
-                      const BorderSide(color: Color(0xFF00BFA5))),
+                      const BorderSide(color: AppColors.ceremonyAccent)),
             ),
           ),
 
@@ -574,7 +575,7 @@ class _AdmissionsPage extends HookWidget {
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: allChecked
-                    ? const Color(0xFF00BFA5)
+                    ? AppColors.ceremonyAccent
                     : Colors.white12,
                 foregroundColor:
                     allChecked ? Colors.black : Colors.white30,
@@ -630,12 +631,12 @@ class _AdmissionTile extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: checked
-            ? const Color(0xFF00BFA5).withOpacity(0.10)
-            : const Color(0xFF1E2A44),
+            ? AppColors.ceremonyAccent.withOpacity(0.10)
+            : AppColors.ceremonySurface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: checked
-              ? const Color(0xFF00BFA5).withOpacity(0.5)
+              ? AppColors.ceremonyAccent.withOpacity(0.5)
               : Colors.white12,
           width: 1,
         ),
@@ -644,14 +645,14 @@ class _AdmissionTile extends StatelessWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         controlAffinity: ListTileControlAffinity.leading,
-        activeColor: const Color(0xFF00BFA5),
-        checkColor: Colors.black,
+        activeColor: AppColors.ceremonyAccent,
+        checkColor: Colors.white,
         value: checked,
         onChanged: onChanged,
         title: Text(
           title,
           style: TextStyle(
-            color: checked ? const Color(0xFF00BFA5) : Colors.white,
+            color: checked ? AppColors.ceremonyAccent : Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
@@ -691,13 +692,13 @@ class _CompletionPage extends ConsumerWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFF00BFA5).withOpacity(0.15),
+              color: AppColors.ceremonyAccent.withOpacity(0.15),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: const Color(0xFF00BFA5).withOpacity(0.5), width: 2),
+                  color: AppColors.ceremonyAccent.withOpacity(0.5), width: 2),
             ),
             child: const Icon(Icons.check_rounded,
-                color: Color(0xFF00BFA5), size: 40),
+                color: AppColors.ceremonyAccent, size: 40),
           ),
           const SizedBox(height: 28),
           const Text(
@@ -736,9 +737,9 @@ class _CompletionPage extends ConsumerWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF00BFA5),
+                foregroundColor: AppColors.ceremonyAccent,
                 side:
-                    const BorderSide(color: Color(0xFF00BFA5), width: 1),
+                    const BorderSide(color: AppColors.ceremonyAccent, width: 1),
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -754,8 +755,8 @@ class _CompletionPage extends ConsumerWidget {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00BFA5),
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.ceremonyAccent,
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_branding_app_bar_title.dart';
 import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/services/notification_service.dart';
@@ -37,7 +39,7 @@ const _pages = [
         'close to your sponsor and fellowship. '
         'Everything you enter stays encrypted on this device.',
     icon: Icons.auto_awesome_outlined,
-    color: Color(0xFF3949AB), // indigo
+    color: AppColors.indigoPrimary,
     quote: RecoveryQuotes.welcome,
   ),
 
@@ -51,7 +53,7 @@ const _pages = [
         'front and center. Small daily actions build the life the promises '
         'describe.',
     icon: Icons.loop_outlined,
-    color: Color(0xFF4527A0), // deep purple
+    color: AppColors.accentDeepPurple,
     quote: RecoveryQuotes.dailyReprieve,
   ),
 
@@ -65,7 +67,7 @@ const _pages = [
         'in the twelfth. Work each step thoroughly, with your sponsor\'s '
         'guidance, and carry what you learn forward.',
     icon: Icons.format_list_numbered_outlined,
-    color: Color(0xFF00695C), // dark teal
+    color: AppColors.cyanSecondary,
     quote: RecoveryQuotes.spiritualLife,
   ),
 
@@ -79,7 +81,7 @@ const _pages = [
         'Use this tool with a sponsor. Stay in the middle of the herd. '
         'The promises are real.',
     icon: Icons.shield_outlined,
-    color: Color(0xFF1B5E20), // dark green
+    color: AppColors.accentDeepGreen,
     quote: RecoveryQuotes.promises,
   ),
 ];
@@ -142,10 +144,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             itemBuilder: (_, i) => _OnboardingPageView(page: _pages[i]),
           ),
 
+          // ── Branding (icon + wordmark + tagline) ───────────────────────────
+          Positioned(
+            top: MediaQuery.of(context).padding.top +
+                AppBrandingAppBarTitle.onboardingLogoTopOffset,
+            left: 16,
+            right: 88,
+            child: const AppBrandingAppBarTitle(
+              layout: AppBrandingLayout.onboarding,
+            ),
+          ),
+
           // ── Skip button (top-right) ───────────────────────────────────────
           if (_current < _pages.length - 1)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
+              top: MediaQuery.of(context).padding.top +
+                  AppBrandingAppBarTitle.onboardingLogoTopOffset,
               right: 16,
               child: TextButton(
                 onPressed: _finish,
@@ -236,7 +250,12 @@ class _OnboardingPageView extends StatelessWidget {
       ),
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(28, 60, 28, 160),
+          padding: EdgeInsets.fromLTRB(
+            28,
+            AppBrandingAppBarTitle.onboardingScrollTopPadding(),
+            28,
+            160,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

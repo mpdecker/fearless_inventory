@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../quotes/recovery_quotes.dart';
+import '../theme/app_colors.dart';
 
 /// A compact, styled quote card used throughout the app.
 /// Renders the quote in italic with source citation beneath.
@@ -73,28 +75,28 @@ class QuoteCard extends StatelessWidget {
       case QuoteCategory.step1:
       case QuoteCategory.step2:
       case QuoteCategory.step3:
-        return Colors.indigo;
+        return AppColors.lightIndigo;
       case QuoteCategory.step4:
-        return Colors.redAccent;
+        return AppColors.accentRed;
       case QuoteCategory.step5:
-        return const Color(0xFF00BFA5); // teal
+        return AppColors.cyanSecondary;
       case QuoteCategory.step6:
-        return Colors.purple;
+        return AppColors.accentPurple;
       case QuoteCategory.step7:
-        return Colors.teal;
+        return AppColors.cyanSecondary;
       case QuoteCategory.step8:
       case QuoteCategory.step9:
-        return Colors.deepOrange;
+        return AppColors.accentDeepOrange;
       case QuoteCategory.step10:
-        return Colors.indigo;
+        return AppColors.indigoPrimary;
       case QuoteCategory.step11:
-        return Colors.orange;
+        return AppColors.accentOrange;
       case QuoteCategory.step12:
-        return Colors.teal.shade700;
+        return AppColors.cyanSecondary;
       case QuoteCategory.tradition:
-        return Colors.purple.shade700;
+        return AppColors.accentDeepPurple;
       case QuoteCategory.promises:
-        return Colors.amber.shade700;
+        return AppColors.accentAmber;
       case QuoteCategory.general:
       case QuoteCategory.onboarding:
         return theme.colorScheme.primary;

@@ -232,6 +232,8 @@ Future<TimeOfDay?> showAdaptiveAppTimePicker({
                         child: CupertinoTheme(
                           data: CupertinoThemeData(
                             brightness: Theme.of(modalContext).brightness,
+                            primaryColor:
+                                Theme.of(modalContext).colorScheme.primary,
                           ),
                           child: CupertinoDatePicker(
                             mode: CupertinoDatePickerMode.time,

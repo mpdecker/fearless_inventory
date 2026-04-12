@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/firebase_auth_service.dart';
 import 'login_screen.dart';
@@ -26,7 +27,7 @@ class AccountScreen extends ConsumerWidget {
     final userAsync = ref.watch(firebaseUserProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF12121F),
+      backgroundColor: AppColors.scaffold,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text('Cloud Account'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/database/database.dart';
 import '../../../core/navigation/adaptive_page_route.dart';
 import '../../../core/widgets/quote_card.dart';
@@ -227,12 +228,12 @@ class StepJournalScreen extends ConsumerWidget {
 
 List<Color> _gradientColors(JournalSubjectContent content) {
   if (content.type == JournalSubjectType.tradition) {
-    return [const Color(0xFF4A148C), const Color(0xFF6A1B9A)];
+    return [AppColors.accentDeepPurple, AppColors.accentPurple];
   }
   final n = content.number;
-  if (n <= 3) return [const Color(0xFF283593), const Color(0xFF3F51B5)];
-  if (n <= 9) return [const Color(0xFFBF360C), const Color(0xFFE64A19)];
-  return [const Color(0xFF004D40), const Color(0xFF00695C)];
+  if (n <= 3) return [AppColors.indigoPrimary, AppColors.lightIndigo];
+  if (n <= 9) return [AppColors.accentDeepOrange, AppColors.accentOrange];
+  return [AppColors.cyanSecondary, AppColors.brightCyan];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

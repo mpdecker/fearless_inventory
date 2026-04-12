@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../core/widgets/app_dialogs.dart';
 import '../../data/repositories/meetings_repository.dart';
@@ -39,21 +40,21 @@ class _FellowshipStyle {
 const _kFellowshipStyles = <String, _FellowshipStyle>{
   'AA': _FellowshipStyle(
     label: 'AA',
-    background: Color(0xFFE8F0FE),
-    foreground: Color(0xFF1A56DB),
-    border: Color(0xFFBFD5F8),
+    background: Color(0xFFEEF2FF),
+    foreground: AppColors.indigoPrimary,
+    border: AppColors.softIndigo,
   ),
   'NA': _FellowshipStyle(
     label: 'NA',
-    background: Color(0xFFE6F9F1),
-    foreground: Color(0xFF0E7A4E),
-    border: Color(0xFFABE8CC),
+    background: Color(0xFFECFEFF),
+    foreground: AppColors.cyanSecondary,
+    border: AppColors.brightCyan,
   ),
   'OA': _FellowshipStyle(
     label: 'OA',
     background: Color(0xFFFFF3E8),
-    foreground: Color(0xFFB45309),
-    border: Color(0xFFFFCF94),
+    foreground: AppColors.dashboardAmber,
+    border: AppColors.accentAmber,
   ),
 };
 

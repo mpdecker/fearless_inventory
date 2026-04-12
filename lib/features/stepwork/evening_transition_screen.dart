@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+
+import '../../core/theme/app_colors.dart';
 import 'package:flutter/services.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,7 +94,7 @@ class _EveningTransitionScreenState extends State<EveningTransitionScreen>
     // The Material underneath is the app's night colour so the exit fade
     // dissolves into darkness rather than white.
     return Material(
-      color: const Color(0xFF12121F),
+      color: AppColors.scaffold,
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (context, _) {

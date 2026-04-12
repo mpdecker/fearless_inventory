@@ -3,8 +3,10 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../core/navigation/adaptive_page_route.dart';
+import '../../core/widgets/app_branding_app_bar_title.dart';
 import '../../core/widgets/app_dialogs.dart';
 
 // Feature Imports
@@ -84,8 +86,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recovery Companion',
-          style: TextStyle(fontWeight: FontWeight.bold)),
+        toolbarHeight: 60,
+        title: const AppBrandingAppBarTitle(),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -142,7 +144,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'planned attendance — they show up on your Step 12 service calendar '
         'as recurring weekly events so your commitments stay visible.',
     icon: Icons.groups_outlined,
-    color: Color(0xFF1A56DB),
+    color: AppColors.dashboardBlue,
   ),
   // ── 2. Step 12 ────────────────────────────────────────────────────────────
   2: _TabIntroData(
@@ -153,7 +155,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'and manage your sponsees here. The calendar keeps your service life '
         'organized alongside your planned meeting attendance.',
     icon: Icons.diversity_3_outlined,
-    color: Color(0xFF00695C),
+    color: AppColors.dashboardTeal,
   ),
   // ── 3. Journal ────────────────────────────────────────────────────────────
   3: _TabIntroData(
@@ -164,7 +166,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'subject, and exportable as a formatted PDF — useful for Step 5 '
         'preparation or sharing reflections with your sponsor.',
     icon: Icons.menu_book_outlined,
-    color: Color(0xFF4527A0),
+    color: AppColors.dashboardPurple,
   ),
   // ── 4. Insights ───────────────────────────────────────────────────────────
   4: _TabIntroData(
@@ -175,7 +177,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'milestones and trend charts help you and your sponsor spot growth — '
         'and blind spots — across days, months, and years.',
     icon: Icons.insights_outlined,
-    color: Color(0xFFB45309),
+    color: AppColors.dashboardAmber,
   ),
 };
 
@@ -303,7 +305,7 @@ class _HomeDashboardView extends StatelessWidget {
           title: "Step 10 Spot Check",
           subtitle: "Log an event — pause, reflect, reset",
           icon: Icons.track_changes_outlined,
-          color: const Color(0xFF00695C),
+          color: AppColors.cyanSecondary,
           onTap: () => Navigator.push(
             context,
             adaptivePageRoute(
@@ -559,8 +561,8 @@ class _SobrietyCard extends ConsumerWidget {
         margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.teal.shade600, Colors.teal.shade900],
+          gradient: const LinearGradient(
+            colors: [AppColors.cyanSecondary, AppColors.indigoPrimary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -626,7 +628,7 @@ class _SobrietyCard extends ConsumerWidget {
                   _MilestoneBadge(
                     label: '🏅 ${milestone.shortLabel}',
                     color: Colors.amber.shade300,
-                    textColor: Colors.teal.shade900,
+                    textColor: AppColors.scaffold,
                   ),
                   if (daysToNext != null)
                     _MilestoneBadge(
@@ -939,8 +941,8 @@ class _StreakHeader extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.indigo.shade500, Colors.indigo.shade800],
+        gradient: const LinearGradient(
+          colors: [AppColors.lightIndigo, AppColors.indigoPrimary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
