@@ -58,6 +58,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   // ── Auth actions ───────────────────────────────────────────────────────────
 
+  void _popIfStacked() {
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    if (nav.canPop()) nav.pop();
+  }
+
   Future<void> _register() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     await _withLoading(() async {
@@ -77,14 +83,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final result =
           await ref.read(firebaseAuthServiceProvider).signInWithGoogle();
       if (result == null) return;
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) _popIfStacked();
     });
   }
 
   Future<void> _signInWithApple() async {
     await _withLoading(() async {
       await ref.read(firebaseAuthServiceProvider).signInWithApple();
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) _popIfStacked();
     });
   }
 
@@ -98,14 +104,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         title: const Text('Check your email'),
         content: Text(
           'We sent a verification link to ${_emailCtrl.text}. '
-          'Open it to confirm your account. You can continue using the app '
-          'in the meantime.',
+          'Open it to verify your email — you will need to confirm before '
+          'continuing past the next screen.',
         ),
         actions: [
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.of(context).pop(); // Back to account screen.
+              _popIfStacked();
             },
             child: const Text('Got it'),
           ),
@@ -187,7 +193,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Optional — your recovery data always stays on your device',
+                  'Your recovery data stays encrypted on this device',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),

@@ -12,7 +12,7 @@ import 'register_screen.dart';
 // AccountScreen
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Cloud account management, accessed from Settings.
+/// Account management, accessed from Settings.
 ///
 /// Signed-out state: sign-in and register entry points + explanation.
 /// Signed-in state: email, verification status, sign-out, delete-account.
@@ -30,7 +30,7 @@ class AccountScreen extends ConsumerWidget {
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text('Cloud Account'),
+        title: const Text('Account'),
       ),
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -61,7 +61,7 @@ class _SignedOutView extends StatelessWidget {
           const Icon(Icons.cloud_outlined, size: 52, color: Colors.tealAccent),
           const SizedBox(height: 20),
           const Text(
-            'Optional cloud account',
+            'Account',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
@@ -87,13 +87,14 @@ class _SignedOutView extends StatelessWidget {
                 const SizedBox(height: 10),
                 _PrivacyPoint(
                   icon: Icons.account_circle_outlined,
-                  text: 'A cloud account is purely for identity — '
-                      'future features may use it for optional backup.',
+                  text: 'Your account is for sign-in and security. '
+                      'Recovery content is not uploaded to our servers.',
                 ),
                 const SizedBox(height: 10),
                 _PrivacyPoint(
-                  icon: Icons.no_accounts_outlined,
-                  text: 'You can use the app fully without creating an account.',
+                  icon: Icons.verified_user_outlined,
+                  text: 'You can change your password or delete your account '
+                      'from this app at any time.',
                 ),
               ],
             ),
@@ -227,7 +228,69 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
     );
   }
 
+  bool _userHasPasswordProvider(User user) =>
+      user.providerData.any((p) => p.providerId == 'password');
+
+  Future<String?> _promptReauthPassword() async {
+    final ctrl = TextEditingController();
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirm password'),
+          content: TextField(
+            controller: ctrl,
+            obscureText: true,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Current password',
+            ),
+            onSubmitted: (_) {
+              final p = ctrl.text.trim();
+              Navigator.of(ctx).pop(p.isEmpty ? null : p);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final p = ctrl.text.trim();
+                Navigator.pop(ctx, p.isEmpty ? null : p);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      ctrl.dispose();
+    }
+  }
+
+  void _showOAuthReauthMessage() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign in again'),
+        content: const Text(
+          'For security, deleting your account needs a fresh sign-in. '
+          'Sign out, sign back in with Google or Apple, then try again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _deleteAccount() async {
+    final user = widget.user;
     try {
       await ref.read(firebaseAuthServiceProvider).deleteAccount();
       if (mounted) {
@@ -237,22 +300,46 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
       }
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
-        if (mounted) {
+        if (!mounted) return;
+        if (!_userHasPasswordProvider(user)) {
+          _showOAuthReauthMessage();
+          return;
+        }
+        final email = user.email;
+        if (email == null || email.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'For security, sign out and sign back in before deleting '
-                'your account.',
-              ),
-            ),
+            const SnackBar(content: Text('No email on file for re-authentication.')),
           );
+          return;
+        }
+        final password = await _promptReauthPassword();
+        if (password == null || password.isEmpty || !mounted) return;
+        try {
+          await ref.read(firebaseAuthServiceProvider).reauthenticateWithPassword(
+                email: email,
+                password: password,
+              );
+          await ref.read(firebaseAuthServiceProvider).deleteAccount();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Account deleted.')),
+            );
+          }
+        } on FirebaseAuthException catch (e2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(FirebaseAuthService.errorMessage(e2)),
+              ),
+            );
+          }
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content:
-                    Text(FirebaseAuthService.errorMessage(e))),
+              content: Text(FirebaseAuthService.errorMessage(e)),
+            ),
           );
         }
       }

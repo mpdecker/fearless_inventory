@@ -6,7 +6,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/app_lock_provider.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/pin_service.dart';
-import '../../home/home_screen.dart';
 import '../widgets/pin_pad.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,7 +15,7 @@ import '../widgets/pin_pad.dart';
 /// Two-step PIN creation: enter then confirm.
 ///
 /// After saving the PIN the user is offered biometric unlock (if available),
-/// then routed to [HomeScreen].
+/// then the app shell continues to the lock screen or home.
 ///
 /// Pass [isChangingPin] = true when the user updates their PIN from Settings.
 class PinSetupScreen extends ConsumerStatefulWidget {
@@ -155,12 +154,6 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen>
 
     if (widget.isChangingPin) {
       Navigator.of(context).pop(); // Return to Settings.
-    } else {
-      // Replace entire stack with HomeScreen.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (_) => false,
-      );
     }
   }
 

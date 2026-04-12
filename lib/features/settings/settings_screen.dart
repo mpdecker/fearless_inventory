@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/onboarding_provider.dart';
 import '../../core/providers/sobriety_provider.dart';
 import '../../core/providers/sponsor_call_provider.dart';
 import '../../core/services/notification_service.dart';
@@ -21,6 +22,7 @@ import '../../data/repositories/review_repository.dart';
 import '../../data/repositories/sponsor_call_repository.dart';
 import '../../data/services/export_service.dart';
 import '../auth/screens/account_screen.dart';
+import '../auth/screens/change_password_screen.dart';
 import '../auth/screens/pin_setup_screen.dart';
 import '../insights/providers/insights_extended_providers.dart';
 import '../meetings/providers/meeting_attendance_provider.dart';
@@ -188,10 +190,22 @@ class SettingsScreen extends ConsumerWidget {
           ),
 
           const Divider(),
-          _buildSectionHeader('Cloud Account'),
+          _buildSectionHeader('Account'),
 
-          // ── Cloud account ──────────────────────────────────────────────
+          // ── Account & sign-in ───────────────────────────────────────────
           _CloudAccountTile(),
+          if (ref.watch(hasPasswordSignInProvider))
+            ListTile(
+              leading: const Icon(Icons.password_outlined,
+                  color: Colors.tealAccent),
+              title: const Text('Change password'),
+              subtitle: const Text('Update your account password'),
+              trailing:
+                  const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () => Navigator.of(context).push(
+                adaptivePageRoute((_) => const ChangePasswordScreen()),
+              ),
+            ),
 
           const Divider(),
           _buildSectionHeader('Onboarding'),
@@ -204,12 +218,9 @@ class SettingsScreen extends ConsumerWidget {
                 'View the opening walkthrough again'),
             onTap: () async {
               await OnboardingService.reset();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  adaptivePageRoute((_) => const OnboardingScreen()),
-                  (_) => false,
-                );
-              }
+              if (!context.mounted) return;
+              ref.invalidate(onboardingCompleteProvider);
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
           ),
 
@@ -1009,8 +1020,7 @@ final _sponsorCallLastProvider =
 
 // ── Cloud account tile ────────────────────────────────────────────────────────
 
-/// Shows a brief summary of the user's cloud account state and links to the
-/// full [AccountScreen] for sign-in / registration / deletion.
+/// Links to [AccountScreen] for profile, verification, and deletion.
 class _CloudAccountTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1018,14 +1028,14 @@ class _CloudAccountTile extends ConsumerWidget {
 
     return userAsync.when(
       loading: () => const ListTile(
-        leading: Icon(Icons.cloud_outlined, color: Colors.blueGrey),
-        title: Text('Cloud Account'),
+        leading: Icon(Icons.person_outline, color: Colors.blueGrey),
+        title: Text('Account'),
         subtitle: Text('Loading…'),
       ),
       error: (_, __) => ListTile(
         leading:
-            const Icon(Icons.cloud_off_outlined, color: Colors.blueGrey),
-        title: const Text('Cloud Account'),
+            const Icon(Icons.person_off_outlined, color: Colors.blueGrey),
+        title: const Text('Account'),
         subtitle: const Text('Unavailable'),
         onTap: () => Navigator.of(context).push(
           adaptivePageRoute((_) => const AccountScreen()),
@@ -1033,14 +1043,12 @@ class _CloudAccountTile extends ConsumerWidget {
       ),
       data: (user) => ListTile(
         leading: Icon(
-          user != null ? Icons.cloud_done_outlined : Icons.cloud_outlined,
+          Icons.person_outline,
           color: user != null ? Colors.tealAccent : Colors.blueGrey,
         ),
-        title: const Text('Cloud Account'),
+        title: const Text('Account'),
         subtitle: Text(
-          user != null
-              ? user.email ?? 'Signed in'
-              : 'No account — optional',
+          user != null ? user.email ?? 'Signed in' : 'Not signed in',
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.white38),
         onTap: () => Navigator.of(context).push(

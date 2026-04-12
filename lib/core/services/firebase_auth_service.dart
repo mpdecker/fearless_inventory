@@ -41,6 +41,9 @@ class FirebaseAuthService {
   /// Stream of auth-state changes.  null = signed out.
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  /// Emits when the user profile changes (e.g. after [reloadCurrentUser]).
+  Stream<User?> get userChanges => _auth.userChanges();
+
   bool get isSignedIn => _auth.currentUser != null;
 
   // ── Email / Password ───────────────────────────────────────────────────────
@@ -84,6 +87,43 @@ class FirebaseAuthService {
   /// Re-send a verification email to the currently signed-in user.
   Future<void> resendVerificationEmail() =>
       _auth.currentUser?.sendEmailVerification() ?? Future.value();
+
+  /// Refreshes profile fields (e.g. [User.emailVerified]) from the server.
+  Future<void> reloadCurrentUser() async {
+    await _auth.currentUser?.reload();
+  }
+
+  /// Re-authenticates with email/password (e.g. before sensitive operations).
+  Future<void> reauthenticateWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'user-not-found',
+        message: 'No signed-in user.',
+      );
+    }
+    final credential = EmailAuthProvider.credential(
+      email: email.trim(),
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  /// Updates password after re-authenticating with the current password.
+  Future<void> updatePassword({
+    required String email,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await reauthenticateWithPassword(
+      email: email,
+      password: currentPassword,
+    );
+    await _auth.currentUser?.updatePassword(newPassword);
+  }
 
   // ── Google ─────────────────────────────────────────────────────────────────
 

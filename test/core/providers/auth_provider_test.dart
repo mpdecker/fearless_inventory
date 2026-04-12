@@ -20,8 +20,7 @@ void main() {
   setUp(() {
     authController = StreamController<User?>.broadcast();
     mockAuth = MockFirebaseAuthService();
-    when(() => mockAuth.authStateChanges)
-        .thenAnswer((_) => authController.stream);
+    when(() => mockAuth.userChanges).thenAnswer((_) => authController.stream);
 
     container = ProviderContainer(
       overrides: [

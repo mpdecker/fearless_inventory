@@ -34,7 +34,7 @@ dependencies:
 
   # Authentication — Firebase (optional cloud account)
   firebase_core: ^3.1.0
-  firebase_auth: ^5.1.0
+  firebase_auth: ^5.7.0
 
   # OAuth providers (App Store requires Sign in with Apple alongside Google)
   google_sign_in: ^6.2.1

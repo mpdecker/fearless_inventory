@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/onboarding_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_branding_app_bar_title.dart';
-import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/onboarding_service.dart';
-import '../auth/screens/pin_setup_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page data model
@@ -90,14 +90,14 @@ const _pages = [
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   int _current = 0;
 
@@ -121,10 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finish() async {
     await OnboardingService.markComplete();
     if (!mounted) return;
-    // After onboarding, always go to PIN setup before the home screen.
-    Navigator.of(context).pushReplacement(
-      adaptivePageRoute((_) => const PinSetupScreen()),
-    );
+    ref.invalidate(onboardingCompleteProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().processPendingLaunchNotification();
     });

@@ -17,9 +17,10 @@ final firebaseAuthServiceProvider = Provider<FirebaseAuthService>(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Streams the current Firebase [User], or null when signed out.
-/// Rebuilds dependants on every sign-in / sign-out event.
+/// Uses [FirebaseAuth.userChanges] so profile updates (e.g. email verified)
+/// rebuild after [FirebaseAuthService.reloadCurrentUser].
 final firebaseUserProvider = StreamProvider<User?>((ref) {
-  return ref.watch(firebaseAuthServiceProvider).authStateChanges;
+  return ref.watch(firebaseAuthServiceProvider).userChanges;
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,4 +52,11 @@ final currentUserProvider = Provider<User?>((ref) {
 final isEmailVerifiedProvider = Provider<bool>((ref) {
   final user = ref.watch(currentUserProvider);
   return user?.emailVerified ?? false;
+});
+
+/// True when the account has an email/password sign-in method.
+final hasPasswordSignInProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  return user.providerData.any((p) => p.providerId == 'password');
 });

@@ -252,6 +252,75 @@ void main() {
     });
   });
 
+  // ── reloadCurrentUser ─────────────────────────────────────────────────────
+
+  group('reloadCurrentUser', () {
+    test('calls reload on current user', () async {
+      final mockUser = MockUser();
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.reload()).thenAnswer((_) async {});
+
+      await sut.reloadCurrentUser();
+
+      verify(() => mockUser.reload()).called(1);
+    });
+
+    test('completes when no user is signed in', () async {
+      when(() => mockAuth.currentUser).thenReturn(null);
+      await expectLater(sut.reloadCurrentUser(), completes);
+    });
+  });
+
+  // ── updatePassword ─────────────────────────────────────────────────────────
+
+  group('updatePassword', () {
+    test('reauthenticates then updates password', () async {
+      final mockUser = MockUser();
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.reauthenticateWithCredential(any()))
+          .thenAnswer((_) async => MockUserCredential());
+      when(() => mockUser.updatePassword(any())).thenAnswer((_) async {});
+
+      await sut.updatePassword(
+        email: 'user@example.com',
+        currentPassword: 'OldPassword1',
+        newPassword: 'NewPassword1',
+      );
+
+      verify(() => mockUser.updatePassword('NewPassword1')).called(1);
+    });
+  });
+
+  // ── reauthenticateWithPassword ─────────────────────────────────────────────
+
+  group('reauthenticateWithPassword', () {
+    test('throws when no user is signed in', () async {
+      when(() => mockAuth.currentUser).thenReturn(null);
+
+      expect(
+        () => sut.reauthenticateWithPassword(
+          email: 'a@b.com',
+          password: 'x',
+        ),
+        throwsA(isA<FirebaseAuthException>()),
+      );
+    });
+
+    test('calls reauthenticateWithCredential', () async {
+      final mockUser = MockUser();
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockUser.reauthenticateWithCredential(any()))
+          .thenAnswer((_) async => MockUserCredential());
+
+      await sut.reauthenticateWithPassword(
+        email: 'user@example.com',
+        password: 'Secret1',
+      );
+
+      verify(() => mockUser.reauthenticateWithCredential(any())).called(1);
+    });
+  });
+
   // ── deleteAccount ────────────────────────────────────────────────────────
 
   group('deleteAccount', () {

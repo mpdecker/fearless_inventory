@@ -15,7 +15,8 @@ import 'register_screen.dart';
 
 /// Firebase sign-in: email + password, Sign in with Apple, Sign in with Google.
 ///
-/// Navigation: push on top of SettingsScreen → account screen flow.
+/// When opened from [AccountScreen], pops on success. When shown from the
+/// bootstrap flow, success is handled by the shell (no pop).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -57,6 +58,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // ── Auth actions ───────────────────────────────────────────────────────────
 
+  void _popIfStacked() {
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    if (nav.canPop()) nav.pop();
+  }
+
   Future<void> _signInWithEmail() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     await _withLoading(() async {
@@ -64,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             email: _emailCtrl.text,
             password: _passwordCtrl.text,
           );
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) _popIfStacked();
     });
   }
 
@@ -73,14 +80,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final result =
           await ref.read(firebaseAuthServiceProvider).signInWithGoogle();
       if (result == null) return; // User cancelled.
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) _popIfStacked();
     });
   }
 
   Future<void> _signInWithApple() async {
     await _withLoading(() async {
       await ref.read(firebaseAuthServiceProvider).signInWithApple();
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) _popIfStacked();
     });
   }
 
@@ -153,7 +160,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Sign in to your optional cloud account',
+                  'Sign in to your account',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),
@@ -280,8 +287,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // ── Privacy note ──────────────────────────────────────────
                 const SizedBox(height: 16),
                 Text(
-                  'Your recovery data never leaves this device. '
-                  'A cloud account is optional — for identity only.',
+                  'Your recovery data stays encrypted on this device. '
+                  'Your account is for sign-in and security only.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.3),
