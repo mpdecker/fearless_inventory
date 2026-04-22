@@ -11,6 +11,15 @@ import '../services/location_service.dart';
 
 enum MeetingFormat { all, inPerson, online, hybrid }
 
+/// Sub-mode for Browse and Search: physical meetings (in-person + hybrid) vs
+/// online-only meetings, each with its own list semantics.
+enum MeetingFinderMode {
+  /// In-person and hybrid meetings; location + distance apply when available.
+  nearby,
+  /// Online-only meetings worldwide; location and distance do not apply.
+  onlineOnly,
+}
+
 /// Time-of-day period for filtering by meeting start time.
 enum MeetingTimeOfDay {
   morning,   // 5:00 AM – 12:00 PM
@@ -174,8 +183,12 @@ class MeetingFilter {
   List<Meeting> apply(List<Meeting> meetings) {
     return meetings.where((m) {
       if (fellowship != null &&
-          m.fellowship.toUpperCase() != fellowship!.toUpperCase()) return false;
-      if (weekday != null && m.weekday != weekday) return false;
+          m.fellowship.toUpperCase() != fellowship!.toUpperCase()) {
+        return false;
+      }
+      if (weekday != null && m.weekday != weekday) {
+        return false;
+      }
 
       if (timeOfDay != null) {
         final parts = m.startTime.split(':');
@@ -218,6 +231,10 @@ MeetingFilter _defaultFilter() => const MeetingFilter(language: 'en');
 
 final meetingFilterProvider =
     StateProvider<MeetingFilter>((ref) => _defaultFilter());
+
+/// Shared between Browse and Search tabs (same finder mode in both).
+final meetingFinderModeProvider =
+    StateProvider<MeetingFinderMode>((ref) => MeetingFinderMode.nearby);
 
 final allMeetingsProvider = StreamProvider<List<Meeting>>((ref) {
   return ref.watch(meetingsRepositoryProvider).watchAll();
@@ -280,11 +297,26 @@ final meetingDistancesProvider = Provider<Map<int, double>>((ref) {
 });
 
 final filteredMeetingsProvider = Provider<List<Meeting>>((ref) {
-  final all    = ref.watch(allMeetingsProvider).valueOrNull ?? [];
+  final all = ref.watch(allMeetingsProvider).valueOrNull ?? [];
   final filter = ref.watch(meetingFilterProvider);
-  final mins   = ref.watch(meetingMinutesProvider);
-  return filter.apply(all)
-    ..sort((a, b) => (mins[a.id] ?? 0).compareTo(mins[b.id] ?? 0));
+  final mode = ref.watch(meetingFinderModeProvider);
+  final mins = ref.watch(meetingMinutesProvider);
+  int cmp(Meeting a, Meeting b) =>
+      (mins[a.id] ?? 0).compareTo(mins[b.id] ?? 0);
+
+  if (mode == MeetingFinderMode.onlineOnly) {
+    final pool =
+        all.where((m) => m.isOnline && !m.isHybrid).toList(growable: false);
+    final list = filter.copyWith(format: MeetingFormat.all).apply(pool);
+    list.sort(cmp);
+    return list;
+  }
+
+  final pool =
+      all.where((m) => !(m.isOnline && !m.isHybrid)).toList(growable: false);
+  final list = filter.apply(pool);
+  list.sort(cmp);
+  return list;
 });
 
 /// Result type for [browseMeetingsProvider].
@@ -297,43 +329,63 @@ class BrowseResult {
 
 /// Location-aware meeting list for the Browse and (optionally) Search tabs.
 ///
-/// In-person meetings are restricted to [distanceRadiusMiProvider] (default
-/// 100 mi). Online/hybrid bypass location filtering entirely.
-/// Results are sorted by next occurrence, in-person first.
+/// [MeetingFinderMode.nearby]: in-person and hybrid only; when a location is
+/// set, rows are restricted to [distanceRadiusMiProvider] (default 100 mi).
+/// Pure online meetings never appear here (use the Online subtab).
+///
+/// [MeetingFinderMode.onlineOnly]: online-only meetings worldwide; format
+/// filter is ignored (treated as "all") for this list.
 final browseMeetingsProvider = Provider<BrowseResult>((ref) {
-  final all      = ref.watch(allMeetingsProvider).valueOrNull ?? [];
-  final filter   = ref.watch(meetingFilterProvider);
-  final loc      = ref.watch(activeLocationProvider).valueOrNull;
-  final radius   = ref.watch(distanceRadiusMiProvider);
-  final mins     = ref.watch(meetingMinutesProvider);
+  final mode = ref.watch(meetingFinderModeProvider);
+  if (mode == MeetingFinderMode.onlineOnly) {
+    return _browseOnlineOnlyMeetings(ref);
+  }
+  return _browseNearbyMeetings(ref);
+});
+
+BrowseResult _browseNearbyMeetings(Ref ref) {
+  final all = ref.watch(allMeetingsProvider).valueOrNull ?? [];
+  final filter = ref.watch(meetingFilterProvider);
+  final loc = ref.watch(activeLocationProvider).valueOrNull;
+  final radius = ref.watch(distanceRadiusMiProvider);
+  final mins = ref.watch(meetingMinutesProvider);
   final distances = ref.watch(meetingDistancesProvider);
 
-  final filtered = filter.apply(all);
+  final pool =
+      all.where((m) => !(m.isOnline && !m.isHybrid)).toList(growable: false);
+  final filtered = filter.apply(pool);
   int cmp(Meeting a, Meeting b) =>
       (mins[a.id] ?? 0).compareTo(mins[b.id] ?? 0);
 
-  final onlineOnly = filter.format == MeetingFormat.online ||
-                     filter.format == MeetingFormat.hybrid;
-
-  if (loc != null && !onlineOnly) {
+  if (loc != null) {
     final radiusKm = miToKm(radius ?? 100.0);
     final visibleDistances = <int, double>{};
-    final inPerson = <Meeting>[];
+    final nearby = <Meeting>[];
 
     for (final m in filtered) {
       if (m.isOnline && !m.isHybrid) continue;
       final km = distances[m.id];
       if (km == null || km > radiusKm) continue;
-      inPerson.add(m);
+      nearby.add(m);
       visibleDistances[m.id] = km;
     }
-    inPerson.sort(cmp);
-
-    final onlineHybrid = filtered.where((m) => m.isOnline || m.isHybrid).toList()
-      ..sort(cmp);
-
-    return BrowseResult([...inPerson, ...onlineHybrid], visibleDistances);
+    nearby.sort(cmp);
+    return BrowseResult(nearby, visibleDistances);
   }
 
   return BrowseResult(filtered..sort(cmp), const {});
-});
+}
+
+BrowseResult _browseOnlineOnlyMeetings(Ref ref) {
+  final all = ref.watch(allMeetingsProvider).valueOrNull ?? [];
+  final filter = ref.watch(meetingFilterProvider);
+  final mins = ref.watch(meetingMinutesProvider);
+  int cmp(Meeting a, Meeting b) =>
+      (mins[a.id] ?? 0).compareTo(mins[b.id] ?? 0);
+
+  final pool =
+      all.where((m) => m.isOnline && !m.isHybrid).toList(growable: false);
+  final list = filter.copyWith(format: MeetingFormat.all).apply(pool);
+  list.sort(cmp);
+  return BrowseResult(list, const {});
+}

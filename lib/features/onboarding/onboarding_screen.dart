@@ -79,7 +79,10 @@ const _pages = [
         'transmitted anywhere. Your fifth step is yours to share — with '
         'your Higher Power, yourself, and the person you choose. '
         'Use this tool with a sponsor. Stay in the middle of the herd. '
-        'The promises are real.',
+        'The promises are real.\n\n'
+        'To use the app you will create a free account next. That account is '
+        'only for sign-in and security — your inventory, journal, and step '
+        'work stay encrypted on this device and are not uploaded to our servers.',
     icon: Icons.shield_outlined,
     color: AppColors.accentDeepGreen,
     quote: RecoveryQuotes.promises,

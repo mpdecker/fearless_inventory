@@ -270,27 +270,151 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
     }
   }
 
-  void _showOAuthReauthMessage() {
-    showDialog<void>(
+  bool _userHasGoogle(User user) =>
+      user.providerData.any((p) => p.providerId == 'google.com');
+
+  bool _userHasApple(User user) =>
+      user.providerData.any((p) => p.providerId == 'apple.com');
+
+  Future<void> _showOAuthReauthFallback() async {
+    final signOut = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign in again'),
+        title: const Text('Verify your identity'),
         content: const Text(
-          'For security, deleting your account needs a fresh sign-in. '
-          'Sign out, sign back in with Google or Apple, then try again.',
+          'We could not refresh your sign-in for this account. '
+          'Sign out and sign back in, then open Account and delete again.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign Out'),
           ),
         ],
       ),
     );
+    if (signOut == true && mounted) {
+      await ref.read(firebaseAuthServiceProvider).signOut();
+    }
+  }
+
+  /// Picks Google vs Apple when the account has no password provider.
+  Future<String?> _promptOAuthReauthMethod(User user) => showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Confirm it's you"),
+          content: const Text(
+            'For security, sign in one more time with the provider you used '
+            'before we delete your cloud account.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            if (_userHasGoogle(user))
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'google'),
+                child: const Text('Continue with Google'),
+              ),
+            if (_userHasApple(user))
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'apple'),
+                child: const Text('Continue with Apple'),
+              ),
+          ],
+        ),
+      );
+
+  Future<void> _deleteAfterPasswordReauth(User user) async {
+    final email = user.email;
+    if (email == null || email.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No email on file for re-authentication.'),
+          ),
+        );
+      }
+      return;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter your password to finish deleting your account.'),
+        ),
+      );
+    }
+    final password = await _promptReauthPassword();
+    if (password == null || password.isEmpty || !mounted) return;
+    try {
+      await ref.read(firebaseAuthServiceProvider).reauthenticateWithPassword(
+            email: email,
+            password: password,
+          );
+      await ref.read(firebaseAuthServiceProvider).deleteAccount();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account deleted.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(FirebaseAuthService.errorMessage(e))),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAfterOAuthReauth(User user) async {
+    if (!_userHasGoogle(user) && !_userHasApple(user)) {
+      await _showOAuthReauthFallback();
+      return;
+    }
+
+    final method = await _promptOAuthReauthMethod(user);
+    if (method == null || !mounted) return;
+
+    final service = ref.read(firebaseAuthServiceProvider);
+    try {
+      if (method == 'google') {
+        final ok = await service.reauthenticateWithGoogle();
+        if (!ok) return;
+      } else if (method == 'apple') {
+        await service.reauthenticateWithApple();
+      } else {
+        return;
+      }
+      await service.deleteAccount();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account deleted.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(FirebaseAuthService.errorMessage(e))),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleRequiresRecentLogin(User user) async {
+    if (!mounted) return;
+    if (_userHasPasswordProvider(user)) {
+      await _deleteAfterPasswordReauth(user);
+      return;
+    }
+    await _deleteAfterOAuthReauth(user);
   }
 
   Future<void> _deleteAccount() async {
-    final user = widget.user;
     try {
       await ref.read(firebaseAuthServiceProvider).deleteAccount();
       if (mounted) {
@@ -300,48 +424,13 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
       }
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
-        if (!mounted) return;
-        if (!_userHasPasswordProvider(user)) {
-          _showOAuthReauthMessage();
-          return;
-        }
-        final email = user.email;
-        if (email == null || email.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No email on file for re-authentication.')),
-          );
-          return;
-        }
-        final password = await _promptReauthPassword();
-        if (password == null || password.isEmpty || !mounted) return;
-        try {
-          await ref.read(firebaseAuthServiceProvider).reauthenticateWithPassword(
-                email: email,
-                password: password,
-              );
-          await ref.read(firebaseAuthServiceProvider).deleteAccount();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Account deleted.')),
-            );
-          }
-        } on FirebaseAuthException catch (e2) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(FirebaseAuthService.errorMessage(e2)),
-              ),
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(FirebaseAuthService.errorMessage(e)),
-            ),
-          );
-        }
+        await _handleRequiresRecentLogin(widget.user);
+        return;
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(FirebaseAuthService.errorMessage(e))),
+        );
       }
     }
   }

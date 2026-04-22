@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 flutter pub get                          # Install dependencies
-flutter analyze                          # Lint (flutter_lints)
+flutter analyze                          # Lint (flutter_lints); excludes packages/flutter_contacts/example_full via analysis_options.yaml
 flutter test                             # Run tests
 flutter test test/path/to_test.dart      # Run a single test file
 dart run build_runner build              # Regenerate Drift ORM code after schema changes

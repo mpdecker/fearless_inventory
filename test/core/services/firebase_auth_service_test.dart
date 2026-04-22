@@ -13,6 +13,11 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class MockGoogleSignIn extends Mock implements GoogleSignIn {}
 
+class MockGoogleSignInAccount extends Mock implements GoogleSignInAccount {}
+
+class MockGoogleSignInAuthentication extends Mock
+    implements GoogleSignInAuthentication {}
+
 class MockUser extends Mock implements User {}
 
 class MockUserCredential extends Mock implements UserCredential {}
@@ -203,6 +208,51 @@ void main() {
 
       final result = await sut.signInWithGoogle();
       expect(result, isNull);
+    });
+  });
+
+  // ── reauthenticateWithGoogle ───────────────────────────────────────────────
+
+  group('reauthenticateWithGoogle', () {
+    test('throws when no user is signed in', () async {
+      when(() => mockAuth.currentUser).thenReturn(null);
+
+      expect(
+        () => sut.reauthenticateWithGoogle(),
+        throwsA(isA<FirebaseAuthException>()),
+      );
+    });
+
+    test('returns false when user cancels Google sheet', () async {
+      final mockUser = MockUser();
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockGoogleSignIn.signIn()).thenAnswer((_) async => null);
+
+      final ok = await sut.reauthenticateWithGoogle();
+      expect(ok, isFalse);
+      verifyNever(() => mockUser.reauthenticateWithCredential(any()));
+    });
+
+    test('calls reauthenticateWithCredential when Google returns an account',
+        () async {
+      final mockUser = MockUser();
+      final mockAccount = MockGoogleSignInAccount();
+      final mockGoogleAuth = MockGoogleSignInAuthentication();
+
+      when(() => mockAuth.currentUser).thenReturn(mockUser);
+      when(() => mockGoogleSignIn.signIn())
+          .thenAnswer((_) async => mockAccount);
+      when(() => mockAccount.authentication)
+          .thenAnswer((_) async => mockGoogleAuth);
+      when(() => mockGoogleAuth.accessToken).thenReturn('at');
+      when(() => mockGoogleAuth.idToken).thenReturn('idt');
+      when(() => mockUser.reauthenticateWithCredential(any()))
+          .thenAnswer((_) async => MockUserCredential());
+
+      final ok = await sut.reauthenticateWithGoogle();
+
+      expect(ok, isTrue);
+      verify(() => mockUser.reauthenticateWithCredential(any())).called(1);
     });
   });
 

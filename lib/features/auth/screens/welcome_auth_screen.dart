@@ -21,7 +21,7 @@ class WelcomeAuthScreen extends StatelessWidget {
               const Icon(Icons.shield_outlined, size: 56, color: Colors.tealAccent),
               const SizedBox(height: 24),
               const Text(
-                'Sign in to continue',
+                'Account required',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -31,9 +31,10 @@ class WelcomeAuthScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Create an account or sign in. Your recovery journal and '
-                'inventory stay encrypted on this device — sign-in is for your '
-                'identity and account security only.',
+                'Fearless Inventory needs a free account before you continue — '
+                'for sign-in, email verification, and account security. '
+                'Your recovery journal and inventory stay encrypted on this '
+                'device; we do not upload your step work to our servers.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.65),

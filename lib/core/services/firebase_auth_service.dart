@@ -143,6 +143,30 @@ class FirebaseAuthService {
     return _auth.signInWithCredential(credential);
   }
 
+  /// Re-authenticates the current user with Google (e.g. before account deletion).
+  ///
+  /// Returns `false` if the user closed the Google sign-in sheet without
+  /// completing sign-in. Throws [FirebaseAuthException] on Firebase errors.
+  Future<bool> reauthenticateWithGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'user-not-found',
+        message: 'No signed-in user.',
+      );
+    }
+    final googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return false;
+
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    await user.reauthenticateWithCredential(credential);
+    return true;
+  }
+
   // ── Apple ──────────────────────────────────────────────────────────────────
 
   /// Initiate Sign in with Apple (required by App Store when offering any
@@ -185,6 +209,36 @@ class FirebaseAuthService {
     }
 
     return result;
+  }
+
+  /// Re-authenticates the current user with Apple (e.g. before account deletion).
+  ///
+  /// Throws if the user cancels or on Firebase error.
+  Future<void> reauthenticateWithApple() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'user-not-found',
+        message: 'No signed-in user.',
+      );
+    }
+    final rawNonce = _generateNonce();
+    final hashedNonce = _sha256(rawNonce);
+
+    final appleCredential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+      nonce: hashedNonce,
+    );
+
+    final oauthCredential = OAuthProvider('apple.com').credential(
+      idToken: appleCredential.identityToken,
+      rawNonce: rawNonce,
+    );
+
+    await user.reauthenticateWithCredential(oauthCredential);
   }
 
   // ── Account management ─────────────────────────────────────────────────────
