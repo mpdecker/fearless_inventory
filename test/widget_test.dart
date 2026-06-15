@@ -12,7 +12,7 @@ import 'package:fearless_inventory/main.dart';
 
 void main() {
   testWidgets('app boots', (WidgetTester tester) async {
-    await tester.pumpWidget(const FearlessInventoryApp());
+    await tester.pumpWidget(const FearlessInventoryApp(showOnboarding: false));
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/onboarding_service.dart';
 import '../../core/providers/sobriety_provider.dart';
 import '../../data/services/export_service.dart';
@@ -153,6 +154,12 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           _buildSectionHeader('About'),
 
+          ListTile(
+            leading: const Icon(Icons.favorite_outline, color: Colors.roseAccent),
+            title: const Text('Support Development'),
+            subtitle: const Text('Keep Fearless Inventory free and donation-only'),
+            onTap: () => _handleDonate(context),
+          ),
           const ListTile(
             leading: Icon(Icons.info_outline),
             title: Text('App Version'),
@@ -347,6 +354,27 @@ class SettingsScreen extends ConsumerWidget {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _handleDonate(BuildContext context) async {
+    final url = Uri.parse('https://ko-fi.com/fearless_inventory'); // Placeholder URL
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open donation link.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening link: $e')),
+        );
+      }
     }
   }
 }
