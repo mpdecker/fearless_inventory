@@ -15,29 +15,9 @@ import 'package:fearless_inventory/features/meetings/services/meeting_sync_servi
 import 'package:fearless_inventory/features/meetings/services/location_service.dart';
 import 'package:fearless_inventory/main.dart';
 
-/// Synchronous stand-in for [SobrietyDateNotifier] that avoids the
-/// FlutterSecureStorage platform channel in the headless test runner.
-class MockSobrietyDateNotifier extends SobrietyDateNotifier {
-  @override
-  // ignore: annotate_overrides
-  Future<void> _load() async {
-    state = const AsyncValue.data(null);
-  }
-
-  @override
-  Future<void> setDate(DateTime date) async {
-    state = AsyncValue.data(date);
-  }
-
-  @override
-  Future<void> clearDate() async {
-    state = const AsyncValue.data(null);
-  }
-}
-
 void main() {
   testWidgets('app boots', (WidgetTester tester) async {
-    // Use an in-memory Drift database for the test.
+    // Use an in-memory Drift database — no encryption key, no file I/O.
     final db = AppDatabase.testing(NativeDatabase.memory());
 
     await tester.pumpWidget(
@@ -47,12 +27,14 @@ void main() {
           databaseProvider.overrideWithValue(db),
           // Empty adapter list — no network calls in tests.
           meetingAdaptersProvider.overrideWithValue([]),
-          // Stub location providers — Geolocator blocks on the test runner.
+          // Stub location providers — Geolocator blocks on the headless runner.
           activeLocationProvider.overrideWith((ref) => null),
           userLocationProvider.overrideWith((ref) => null),
           geocodedLocationProvider.overrideWith((ref) => null),
           // Stub sobriety provider — FlutterSecureStorage not available in tests.
-          sobrietyDateProvider.overrideWith((ref) => MockSobrietyDateNotifier()),
+          sobrietyDateProvider.overrideWith(
+            (ref) => SobrietyDateNotifier.testing(),
+          ),
         ],
         child: const FearlessInventoryApp(showOnboarding: false),
       ),
@@ -60,12 +42,13 @@ void main() {
 
     expect(find.byType(MaterialApp), findsOneWidget);
 
-    // Tear down: replace the tree with an empty widget so Riverpod disposes its
-    // container and cancels stream subscriptions.  Then pump fake-async timers
-    // that Drift schedules during StreamQueryStore cleanup.
+    // Replace the tree with an empty widget so Riverpod disposes its container
+    // and cancels all stream subscriptions.
     await tester.pumpWidget(const SizedBox());
-    // Flush all pending zero-duration timers that Drift's StreamQueryStore
-    // schedules synchronously on stream cancellation.
+
+    // Flush zero-duration timers that Drift's StreamQueryStore schedules
+    // synchronously on stream cancellation — satisfies flutter_test's
+    // timersPending invariant.
     await tester.pump(Duration.zero);
   });
 }

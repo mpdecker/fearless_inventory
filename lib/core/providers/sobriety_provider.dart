@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/sobriety_service.dart';
 
@@ -12,6 +13,12 @@ class SobrietyDateNotifier extends StateNotifier<AsyncValue<DateTime?>> {
   SobrietyDateNotifier() : super(const AsyncValue.loading()) {
     _load();
   }
+
+  /// Constructs a notifier pre-seeded with [initialValue] and skips the
+  /// [FlutterSecureStorage] read.  Use only in tests.
+  @visibleForTesting
+  SobrietyDateNotifier.testing({DateTime? initialValue})
+      : super(AsyncValue.data(initialValue));
 
   Future<void> _load() async {
     try {
