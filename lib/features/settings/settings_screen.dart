@@ -155,7 +155,7 @@ class SettingsScreen extends ConsumerWidget {
           _buildSectionHeader('About'),
 
           ListTile(
-            leading: const Icon(Icons.favorite_outline, color: Colors.roseAccent),
+            leading: const Icon(Icons.favorite_outline, color: Colors.pink),
             title: const Text('Support Development'),
             subtitle: const Text('Keep Fearless Inventory free and donation-only'),
             onTap: () => _handleDonate(context),
