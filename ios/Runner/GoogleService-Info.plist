@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyCdKWByxit2RtP27U6wuO1xETmOGoVk2kw</string>
+	<key>GCM_SENDER_ID</key>
+	<string>510334238921</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.happydestiny.happydestiny</string>
+	<key>PROJECT_ID</key>
+	<string>fearless-inventory</string>
+	<key>STORAGE_BUCKET</key>
+	<string>fearless-inventory.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:510334238921:ios:a85311d2bef79848be0d18</string>
+	<key>CLIENT_ID</key>
+	<string>510334238921-REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.510334238921-REPLACE_WITH_IOS_CLIENT_ID</string>
+</dict>
+</plist>

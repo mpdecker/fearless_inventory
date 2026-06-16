@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/navigation/adaptive_page_route.dart';
 import '../data/step_tradition_content.dart';
 import '../providers/journal_providers.dart';
 import 'journal_list_screen.dart';
@@ -54,8 +56,7 @@ class _JournalTabState extends ConsumerState<JournalTab>
                 tooltip: 'All entries',
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const JournalListScreen()),
+                  adaptivePageRoute((_) => const JournalListScreen()),
                 ),
               ),
               if (totalCount > 0)
@@ -65,7 +66,7 @@ class _JournalTabState extends ConsumerState<JournalTab>
                   child: Container(
                     padding: const EdgeInsets.all(3),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF3F51B5),
+                      color: AppColors.indigoPrimary,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -163,8 +164,8 @@ class _SubjectCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => StepJournalScreen(content: content),
+          adaptivePageRoute(
+            (_) => StepJournalScreen(content: content),
           ),
         ),
         child: Container(
@@ -291,10 +292,10 @@ class _SubjectCard extends StatelessWidget {
 
 List<Color> _cardColors(JournalSubjectContent content) {
   if (content.type == JournalSubjectType.tradition) {
-    return [const Color(0xFF6A1B9A), const Color(0xFF7B1FA2)];
+    return [AppColors.accentDeepPurple, AppColors.accentPurple];
   }
   final n = content.number;
-  if (n <= 3) return [const Color(0xFF3F51B5), const Color(0xFF5C6BC0)];
-  if (n <= 9) return [const Color(0xFFE64A19), const Color(0xFFF4511E)];
-  return [const Color(0xFF00695C), const Color(0xFF00897B)];
+  if (n <= 3) return [AppColors.indigoPrimary, AppColors.lightIndigo];
+  if (n <= 9) return [AppColors.accentDeepOrange, AppColors.accentOrange];
+  return [AppColors.cyanSecondary, AppColors.brightCyan];
 }

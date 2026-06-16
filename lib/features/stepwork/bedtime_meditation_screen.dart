@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
 import '../../data/services/reflection_service.dart';
 import '../../data/repositories/meditation_repository.dart';
 import '../../core/widgets/meditation_timer.dart';
+import 'evening_transition_screen.dart';
+import '../review/daily_review_screen.dart';
+import '../review/review_type.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider
@@ -81,10 +85,10 @@ final bedtimeReflectionProvider =
 class BedtimeMeditationScreen extends HookConsumerWidget {
   const BedtimeMeditationScreen({super.key});
 
-  static const Color _nightBg      = Color(0xFF12121F);
-  static const Color _nightSurface = Color(0xFF1E1E2E);
+  static const Color _nightBg      = AppColors.scaffold;
+  static const Color _nightSurface = AppColors.surface;
   static const Color _moonGold     = Color(0xFFE8DCC8);
-  static const Color _timerAccent  = Color(0xFF7986CB); // indigo-300 (readable on dark)
+  static const Color _timerAccent  = AppColors.softIndigo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,7 +109,7 @@ class BedtimeMeditationScreen extends HookConsumerWidget {
             ? _buildEmpty()
             : _buildContent(context, ref, reflection, sessionSaved),
         loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFFB0B0C8)),
+          child: CircularProgressIndicator(color: AppColors.bodySmall),
         ),
         error: (e, _) => Center(
           child: Text('Error: $e',
@@ -171,7 +175,7 @@ class BedtimeMeditationScreen extends HookConsumerWidget {
               color: _nightSurface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08)),
+                  color: Colors.white.withOpacity(0.08)),
             ),
             child: Text(
               'EVENING THEME: ${reflection.theme.toUpperCase()}',
@@ -193,12 +197,12 @@ class BedtimeMeditationScreen extends HookConsumerWidget {
               fontWeight: FontWeight.w300,
               fontStyle: FontStyle.italic,
               height: 1.45,
-              color: Color(0xFFE0E0F0),
+              color: AppColors.onSurface,
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 28),
-            child: Divider(color: Colors.white.withValues(alpha: 0.12)),
+            child: Divider(color: Colors.white.withOpacity(0.12)),
           ),
 
           // ── Reflection body ────────────────────────────────────────────
@@ -217,13 +221,34 @@ class BedtimeMeditationScreen extends HookConsumerWidget {
             style: const TextStyle(
               fontSize: 16,
               height: 1.65,
-              color: Color(0xFFB0B0C8),
+              color: AppColors.bodySmall,
             ),
           ),
           const SizedBox(height: 32),
 
           // ── Evening prayer ─────────────────────────────────────────────
           _buildEveningPrayer(),
+          const SizedBox(height: 20),
+
+          // ── Nightly 10th Step review ───────────────────────────────────
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    const DailyReviewScreen(reviewType: ReviewType.nightly),
+              ),
+            ),
+            icon: const Icon(Icons.checklist_outlined),
+            label: const Text('Nightly 10th Step'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              foregroundColor: Colors.indigo.shade200,
+              side: BorderSide(color: Colors.indigo.shade300),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
           const SizedBox(height: 28),
 
           // ── Meditation timer (dark-mode palette) ──────────────────────
@@ -243,7 +268,14 @@ class BedtimeMeditationScreen extends HookConsumerWidget {
 
           // ── Completion button ─────────────────────────────────────────
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pushReplacement(
+              PageRouteBuilder<void>(
+                pageBuilder: (_, __, ___) => const EveningTransitionScreen(),
+                transitionsBuilder: (_, anim, __, child) =>
+                    FadeTransition(opacity: anim, child: child),
+                transitionDuration: const Duration(milliseconds: 700),
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(56),
               backgroundColor: Colors.indigo.shade700,

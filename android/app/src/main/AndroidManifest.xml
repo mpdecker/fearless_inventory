@@ -7,9 +7,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Location — Nearby meetings feature -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Contacts — Rolodex import -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
-        android:label="fearless_inventory"
+        android:label="Fearless Inventory"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config"

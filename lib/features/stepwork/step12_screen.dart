@@ -5,12 +5,16 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/database/database.dart';
+import '../../core/widgets/app_dialogs.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../data/repositories/step12_repository.dart';
 import '../../data/repositories/service_commitments_repository.dart';
 import '../../data/repositories/sponsee_repository.dart';
 import '../../data/repositories/meetings_repository.dart';
 import '../meetings/services/meeting_calendar_service.dart';
+import 'rolodex_tab.dart';
 import 'sponsee_detail_screen.dart';
 import 'providers/step12_providers.dart';
 
@@ -19,10 +23,10 @@ import 'providers/step12_providers.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum Step12EventType {
-  general('general', 'General', Color(0xFF607D8B)),
-  meeting('meeting', 'Meeting', Color(0xFFE65100)),
-  service('service', 'Service', Color(0xFF00695C)),
-  sponsee('sponsee', 'Sponsee', Color(0xFF6A1B9A));
+  general('general', 'General', AppColors.meetingChipOtherBorder),
+  meeting('meeting', 'Meeting', AppColors.accentDeepOrange),
+  service('service', 'Service', AppColors.cyanSecondary),
+  sponsee('sponsee', 'Sponsee', AppColors.accentDeepPurple);
 
   final String value;
   final String label;
@@ -79,7 +83,7 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
   }
 
@@ -99,6 +103,7 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
           tabs: const [
             Tab(icon: Icon(Icons.calendar_month_outlined), text: 'Calendar'),
             Tab(icon: Icon(Icons.people_outline), text: 'Sponsees'),
+            Tab(icon: Icon(Icons.contacts_outlined), text: 'Rolodex'),
             Tab(icon: Icon(Icons.volunteer_activism_outlined), text: 'Service'),
           ],
         ),
@@ -108,6 +113,7 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
         children: const [
           _CalendarTab(),
           _SponseeTab(),
+          RolodexTab(),
           _ServiceTab(),
         ],
       ),
@@ -134,6 +140,14 @@ class _Step12ScreenState extends ConsumerState<Step12Screen>
           foregroundColor: Colors.white,
         );
       case 2:
+        return FloatingActionButton.extended(
+          onPressed: () => RolodexTab.openAddContact(context),
+          icon: const Icon(Icons.person_add_outlined),
+          label: const Text('Add Contact'),
+          backgroundColor: Colors.teal.shade700,
+          foregroundColor: Colors.white,
+        );
+      case 3:
         final subTab = ref.watch(serviceSubTabProvider);
         if (subTab == 1) {
           return FloatingActionButton.extended(
@@ -436,7 +450,7 @@ class _PlannedMeetingTile extends StatelessWidget {
   // ignore: prefer_const_constructors_in_immutables
   _PlannedMeetingTile({required this.item, required this.ref});
 
-  static const _meetingColor = Color(0xFFE65100); // orange
+  static const _meetingColor = AppColors.accentDeepOrange;
 
   @override
   Widget build(BuildContext context) {
@@ -787,7 +801,7 @@ class _AddEditEventSheetState extends ConsumerState<_AddEditEventSheet> {
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () async {
-                final picked = await showDatePicker(
+                final picked = await showAdaptiveAppDatePicker(
                   context: context,
                   initialDate: _selectedDate,
                   firstDate: DateTime(2020),
@@ -813,7 +827,7 @@ class _AddEditEventSheetState extends ConsumerState<_AddEditEventSheet> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final picked = await showTimePicker(
+                      final picked = await showAdaptiveAppTimePicker(
                         context: context,
                         initialTime:
                             _startTime ?? TimeOfDay.now(),
@@ -836,7 +850,7 @@ class _AddEditEventSheetState extends ConsumerState<_AddEditEventSheet> {
                     onPressed: _startTime == null
                         ? null
                         : () async {
-                            final picked = await showTimePicker(
+                            final picked = await showAdaptiveAppTimePicker(
                               context: context,
                               initialTime: _endTime ??
                                   TimeOfDay(
@@ -1086,8 +1100,8 @@ class _SponseeCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => SponseeDetailScreen(sponseeId: sponsee.id),
+          adaptivePageRoute(
+            (_) => SponseeDetailScreen(sponseeId: sponsee.id),
           ),
         ),
         child: Padding(
@@ -1229,7 +1243,7 @@ class _AddSponseeSheetState extends ConsumerState<AddSponseeSheet> {
       bool futureOk = false}) async {
     final now = DateTime.now();
     final last = futureOk ? DateTime(now.year + 10) : now;
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveAppDatePicker(
       context: context,
       initialDate: initial ?? now,
       firstDate: DateTime(1950),
@@ -1547,9 +1561,9 @@ class _ServiceTab extends HookConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum ServiceCommitmentType {
-  position('position', 'Service Position', Color(0xFF00695C), Icons.stars_outlined),
-  speaking('speaking', 'Speaking', Color(0xFF1565C0), Icons.record_voice_over_outlined),
-  general('general', 'General Service', Color(0xFF6A1B9A), Icons.volunteer_activism_outlined);
+  position('position', 'Service Position', AppColors.cyanSecondary, Icons.stars_outlined),
+  speaking('speaking', 'Speaking', AppColors.lightIndigo, Icons.record_voice_over_outlined),
+  general('general', 'General Service', AppColors.accentDeepPurple, Icons.volunteer_activism_outlined);
 
   final String value;
   final String label;
@@ -2044,10 +2058,10 @@ class _CommitmentCard extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum StepCallType {
-  call('call', 'Phone Call', Color(0xFF0277BD), Icons.phone_in_talk_outlined),
-  visit('visit', 'In-Person Visit', Color(0xFF2E7D32), Icons.home_outlined),
-  sponsorship('sponsorship', 'Sponsee', Color(0xFF6A1B9A), Icons.person_outlined),
-  general('general', 'General', Color(0xFF607D8B), Icons.volunteer_activism_outlined);
+  call('call', 'Phone Call', AppColors.accentBlue, Icons.phone_in_talk_outlined),
+  visit('visit', 'In-Person Visit', AppColors.accentDeepGreen, Icons.home_outlined),
+  sponsorship('sponsorship', 'Sponsee', AppColors.accentDeepPurple, Icons.person_outlined),
+  general('general', 'General', AppColors.meetingChipOtherBorder, Icons.volunteer_activism_outlined);
 
   final String value;
   final String label;
@@ -2511,7 +2525,7 @@ class _AddCommitmentSheetState
             _FormLabel('Start Date'),
             OutlinedButton.icon(
               onPressed: () async {
-                final d = await showDatePicker(
+                final d = await showAdaptiveAppDatePicker(
                   context: context,
                   initialDate: _startDate,
                   firstDate: DateTime(2020),
@@ -2539,7 +2553,7 @@ class _AddCommitmentSheetState
                   ),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    final d = await showDatePicker(
+                    final d = await showAdaptiveAppDatePicker(
                       context: context,
                       initialDate: _endDate ??
                           _startDate.add(const Duration(days: 90)),
@@ -2601,7 +2615,7 @@ class _AddCommitmentSheetState
                   const SizedBox(width: 12),
                   OutlinedButton(
                     onPressed: () async {
-                      final t = await showTimePicker(
+                      final t = await showAdaptiveAppTimePicker(
                         context: context,
                         initialTime:
                             _recurringTime ?? TimeOfDay.now(),
@@ -2938,7 +2952,7 @@ class _AddStepCallSheetState extends ConsumerState<AddStepCallSheet> {
                   flex: 3,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final d = await showDatePicker(
+                      final d = await showAdaptiveAppDatePicker(
                         context: context,
                         initialDate: _occurredAt,
                         firstDate: _isScheduledMode
@@ -2960,7 +2974,7 @@ class _AddStepCallSheetState extends ConsumerState<AddStepCallSheet> {
                   flex: 2,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      final t = await showTimePicker(
+                      final t = await showAdaptiveAppTimePicker(
                         context: context,
                         initialTime: _time ?? TimeOfDay.now(),
                       );

@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/database/database.dart';
+import '../../core/navigation/adaptive_page_route.dart';
+import '../../core/widgets/app_branding_app_bar_title.dart';
+import '../../core/widgets/app_dialogs.dart';
 
 // Feature Imports
-import '../review/daily_review_hub_screen.dart';
+import '../review/daily_review_screen.dart';
+import '../review/review_history_screen.dart';
+import '../review/review_type.dart';
+import '../review/providers/review_providers.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import '../amends/amends_list_screen.dart';
@@ -74,16 +85,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Recovery Companion',
-          style: TextStyle(fontWeight: FontWeight.bold)),
+        toolbarHeight: 60,
+        title: const AppBrandingAppBarTitle(),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen())
+              adaptivePageRoute((_) => const SettingsScreen()),
             ),
           )
         ],
@@ -134,7 +144,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'planned attendance — they show up on your Step 12 service calendar '
         'as recurring weekly events so your commitments stay visible.',
     icon: Icons.groups_outlined,
-    color: Color(0xFF1A56DB),
+    color: AppColors.dashboardBlue,
   ),
   // ── 2. Step 12 ────────────────────────────────────────────────────────────
   2: _TabIntroData(
@@ -145,7 +155,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'and manage your sponsees here. The calendar keeps your service life '
         'organized alongside your planned meeting attendance.',
     icon: Icons.diversity_3_outlined,
-    color: Color(0xFF00695C),
+    color: AppColors.dashboardTeal,
   ),
   // ── 3. Journal ────────────────────────────────────────────────────────────
   3: _TabIntroData(
@@ -156,7 +166,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'subject, and exportable as a formatted PDF — useful for Step 5 '
         'preparation or sharing reflections with your sponsor.',
     icon: Icons.menu_book_outlined,
-    color: Color(0xFF4527A0),
+    color: AppColors.dashboardPurple,
   ),
   // ── 4. Insights ───────────────────────────────────────────────────────────
   4: _TabIntroData(
@@ -167,7 +177,7 @@ const _kTabIntros = <int, _TabIntroData>{
         'milestones and trend charts help you and your sponsor spot growth — '
         'and blind spots — across days, months, and years.',
     icon: Icons.insights_outlined,
-    color: Color(0xFFB45309),
+    color: AppColors.dashboardAmber,
   ),
 };
 
@@ -281,40 +291,46 @@ class _HomeDashboardView extends StatelessWidget {
         _buildSectionHeader("DAILY MAINTENANCE"),
         _buildActionCard(
           context: context,
-          title: "Step 11: Morning Meditation",
+          title: "Morning Meditation",
           subtitle: "Seeking through prayer & meditation",
           icon: Icons.wb_sunny_outlined,
           color: Colors.orange.shade800,
           onTap: () => Navigator.push(
-            context, 
-            MaterialPageRoute(builder: (_) => Step11MeditationScreen())
+            context,
+            adaptivePageRoute((_) => Step11MeditationScreen()),
           ),
         ),
         _buildActionCard(
           context: context,
-          title: "Step 10: Evening Review",
-          subtitle: "Continued to take personal inventory",
-          icon: Icons.nightlight_round_outlined,
-          color: Colors.indigo.shade800,
+          title: "Step 10 Spot Check",
+          subtitle: "Log an event — pause, reflect, reset",
+          icon: Icons.track_changes_outlined,
+          color: AppColors.cyanSecondary,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const DailyReviewHubScreen()),
+            adaptivePageRoute(
+                (_) => const DailyReviewScreen(reviewType: ReviewType.spotCheck)),
           ),
         ),
         _buildActionCard(
           context: context,
-          title: "Step 11: Bedtime Meditation",
+          title: "Nightly Meditation",
           subtitle: "Wind down — trust, gratitude, and rest",
           icon: Icons.bedtime_outlined,
           color: Colors.deepPurple.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BedtimeMeditationScreen()),
+            adaptivePageRoute((_) => const BedtimeMeditationScreen()),
           ),
         ),
 
         const SizedBox(height: 16),
-        
+
+        // STEP 10 HISTORY
+        const _ReviewHistoryCard(),
+
+        const SizedBox(height: 16),
+
         // ACTIVE STEPWORK
         _buildSectionHeader("ACTIVE STEPWORK"),
         _buildActionCard(
@@ -325,7 +341,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.redAccent.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => Step4LandingScreen())
+            adaptivePageRoute((_) => Step4LandingScreen()),
           ),
         ),
         _buildActionCard(
@@ -336,7 +352,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.purple.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const DefectManagementScreen())
+            adaptivePageRoute((_) => const DefectManagementScreen()),
           ),
         ),
         _buildActionCard(
@@ -347,7 +363,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.teal.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ShortcomingDashboardScreen())
+            adaptivePageRoute((_) => const ShortcomingDashboardScreen()),
           ),
         ),
         _buildActionCard(
@@ -358,7 +374,7 @@ class _HomeDashboardView extends StatelessWidget {
           color: Colors.blueGrey.shade700,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AmendsListScreen()),
+            adaptivePageRoute((_) => const AmendsListScreen()),
           ),
         ),
       ],
@@ -366,15 +382,22 @@ class _HomeDashboardView extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Text(title, 
-        style: TextStyle(
-          fontWeight: FontWeight.bold, 
-          color: Colors.grey.shade700, 
-          letterSpacing: 1.1, 
-          fontSize: 12
-        )),
+    return Builder(
+      builder: (context) {
+        final muted = Theme.of(context).colorScheme.onSurface.withOpacity(0.65);
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: muted,
+              letterSpacing: 1.1,
+              fontSize: 12,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -386,28 +409,38 @@ class _HomeDashboardView extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1), 
-            borderRadius: BorderRadius.circular(12)
+    return Builder(
+      builder: (context) {
+        final outline = Theme.of(context).colorScheme.outline.withOpacity(0.35);
+        final subtitleColor =
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.72);
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: outline),
           ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      ),
+          child: ListTile(
+            onTap: onTap,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            title: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            subtitle: Text(subtitle,
+                style: TextStyle(color: subtitleColor, fontSize: 13)),
+            trailing: Icon(Icons.chevron_right, color: subtitleColor),
+          ),
+        );
+      },
     );
   }
 }
@@ -468,20 +501,21 @@ class _SobrietyCard extends ConsumerWidget {
   // ── No date set yet ──────────────────────────────────────────────────────
 
   Widget _buildUnset(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final teal = cs.secondary;
     return GestureDetector(
       onTap: () => _pickDate(context, ref, initial: null),
       child: Container(
         margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: Colors.teal.shade50,
+          color: teal.withOpacity(0.14),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.teal.shade200, width: 1.5),
+          border: Border.all(color: teal.withOpacity(0.45), width: 1.5),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
-                color: Colors.teal.shade700, size: 28),
+            Icon(Icons.calendar_today_outlined, color: teal, size: 28),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -490,7 +524,7 @@ class _SobrietyCard extends ConsumerWidget {
                   Text(
                     'Set your sobriety date',
                     style: TextStyle(
-                      color: Colors.teal.shade800,
+                      color: cs.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
@@ -499,12 +533,14 @@ class _SobrietyCard extends ConsumerWidget {
                   Text(
                     'Tap to enter the date you got sober',
                     style: TextStyle(
-                        color: Colors.teal.shade600, fontSize: 13),
+                      color: cs.onSurface.withOpacity(0.72),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.teal.shade400),
+            Icon(Icons.chevron_right, color: teal.withOpacity(0.8)),
           ],
         ),
       ),
@@ -525,8 +561,8 @@ class _SobrietyCard extends ConsumerWidget {
         margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.teal.shade600, Colors.teal.shade900],
+          gradient: const LinearGradient(
+            colors: [AppColors.cyanSecondary, AppColors.indigoPrimary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -592,7 +628,7 @@ class _SobrietyCard extends ConsumerWidget {
                   _MilestoneBadge(
                     label: '🏅 ${milestone.shortLabel}',
                     color: Colors.amber.shade300,
-                    textColor: Colors.teal.shade900,
+                    textColor: AppColors.scaffold,
                   ),
                   if (daysToNext != null)
                     _MilestoneBadge(
@@ -621,7 +657,7 @@ class _SobrietyCard extends ConsumerWidget {
   Future<void> _pickDate(
       BuildContext context, WidgetRef ref, {required DateTime? initial}) async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveAppDatePicker(
       context: context,
       initialDate: initial ?? now.subtract(const Duration(days: 1)),
       firstDate: DateTime(1950),
@@ -629,16 +665,6 @@ class _SobrietyCard extends ConsumerWidget {
       helpText: 'Select your sobriety date',
       confirmText: 'Set date',
       fieldLabelText: 'Sobriety date',
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: Colors.teal.shade700,
-            onPrimary: Colors.white,
-            surface: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
     );
 
     if (picked != null) {
@@ -688,6 +714,220 @@ class _MilestoneBadge extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 10 history card — shows recent reviews inline on the Dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReviewHistoryCard extends HookConsumerWidget {
+  const _ReviewHistoryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(reviewsStreamProvider);
+    final expanded = useState(false);
+
+    return reviewsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (reviews) {
+        if (reviews.isEmpty) return const SizedBox.shrink();
+
+        final recent = reviews.take(7).toList();
+        final cs = Theme.of(context).colorScheme;
+        final muted = cs.onSurface.withOpacity(0.65);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header row — tap to expand/collapse ──────────────────────
+            InkWell(
+              onTap: () => expanded.value = !expanded.value,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
+                child: Row(
+                  children: [
+                    Text(
+                      'STEP 10 HISTORY',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: muted,
+                        letterSpacing: 1.1,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (expanded.value)
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ReviewHistoryScreen()),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: cs.primary,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('View all',
+                                style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 2),
+                            Icon(Icons.chevron_right,
+                                size: 16, color: cs.primary),
+                          ],
+                        ),
+                      ),
+                    AnimatedRotation(
+                      turns: expanded.value ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Icons.expand_more,
+                          size: 20, color: muted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Collapsible list ─────────────────────────────────────────
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 220),
+              crossFadeState: expanded.value
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Card(
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: cs.outline.withOpacity(0.35)),
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < recent.length; i++) ...[
+                        if (i > 0)
+                          Divider(
+                              height: 1,
+                              indent: 16,
+                              endIndent: 16,
+                              color: Colors.grey.shade200),
+                        _ReviewRow(review: recent[i], isFirst: i == 0),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ReviewRow extends StatelessWidget {
+  final DailyReview review;
+  final bool isFirst;
+  const _ReviewRow({required this.review, required this.isFirst});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDisturbers = review.wasResentful ||
+        review.wasSelfish ||
+        review.wasDishonest ||
+        review.wasAfraid;
+    final statusColor =
+        hasDisturbers ? Colors.orange.shade700 : Colors.green.shade600;
+    final dateStr = DateFormat('EEE, MMM d').format(review.date);
+
+    return InkWell(
+      borderRadius: BorderRadius.vertical(
+        top: isFirst ? const Radius.circular(16) : Radius.zero,
+        bottom: const Radius.circular(16),
+      ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ReviewHistoryScreen()),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Icon(_typeIcon(review.reviewType),
+                size: 16, color: Colors.grey.shade400),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(dateStr,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  if (hasDisturbers)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Wrap(
+                        spacing: 4,
+                        children: [
+                          if (review.wasResentful) _dot('R'),
+                          if (review.wasSelfish) _dot('S'),
+                          if (review.wasDishonest) _dot('D'),
+                          if (review.wasAfraid) _dot('F'),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: statusColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                hasDisturbers ? 'Growth' : 'Clean',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dot(String letter) => Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: Colors.red.shade100,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        alignment: Alignment.center,
+        child: Text(letter,
+            style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade700)),
+      );
+}
+
+IconData _typeIcon(String? type) => switch (type) {
+      'morning' => Icons.wb_sunny_outlined,
+      'spot_check' => Icons.track_changes_outlined,
+      _ => Icons.bedtime_outlined,
+    };
+
 // ── Streak header ─────────────────────────────────────────────────────────────
 
 class _StreakHeader extends ConsumerWidget {
@@ -701,8 +941,8 @@ class _StreakHeader extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.indigo.shade500, Colors.indigo.shade800],
+        gradient: const LinearGradient(
+          colors: [AppColors.lightIndigo, AppColors.indigoPrimary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

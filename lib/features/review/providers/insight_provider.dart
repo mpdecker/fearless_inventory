@@ -79,7 +79,7 @@ final insightsProvider =
   final journalEntries     = results[7] as List<JournalEntry>;
   final sponsees           = results[8] as List<Sponsee>;
 
-  return _computeInsights(
+  return computeInsights(
     resentments:        resentments,
     fears:              fears,
     harms:              harms,
@@ -93,10 +93,12 @@ final insightsProvider =
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Core computation — pure function, easy to unit-test
+// Core computation — pure function, exported for unit-testing.
 // ─────────────────────────────────────────────────────────────────────────────
 
-List<InsightCard> _computeInsights({
+// ignore: avoid_classes_with_only_static_members (named export for tests)
+// Renamed from _computeInsights to be importable in test files.
+List<InsightCard> computeInsights({
   required List<Resentment> resentments,
   required List<Fear> fears,
   required List<Harm> harms,
@@ -142,8 +144,8 @@ List<InsightCard> _computeInsights({
     final half = (reviews.length / 2).floor();
     final recent = reviews.take(half).toList();
     final older = reviews.skip(half).take(half).toList();
-    final avgRecent = _avgDisturbers(recent);
-    final avgOlder = _avgDisturbers(older);
+    final avgRecent = avgDisturbers(recent);
+    final avgOlder = avgDisturbers(older);
 
     final delta = avgOlder > 0
         ? ((avgRecent - avgOlder) / avgOlder * 100).round()
@@ -222,7 +224,7 @@ List<InsightCard> _computeInsights({
       value: '$completed / ${amends.length}',
       interpretation:
           '$completed complete · $pending planned · $step8 on Step 8 list. '
-          '${pct >= 50 ? "You\'ve come more than halfway — each one matters." : "Every completed amends is a piece of freedom returned."}',
+          '${pct >= 50 ? "You've come more than halfway — each one matters." : "Every completed amends is a piece of freedom returned."}',
       level: pct >= 75
           ? InsightLevel.encouraging
           : pct >= 25
@@ -457,7 +459,95 @@ List<InsightCard> _computeInsights({
     }
   }
 
-  // ── 13. Empty state ───────────────────────────────────────────────────────
+  // ── 13. Clear day run ────────────────────────────────────────────────────
+  // Consecutive reviewed days where no disturbers were flagged (newest first).
+  if (reviews.length >= 5) {
+    final byDate = <String, List<DailyReview>>{};
+    for (final r in reviews) {
+      final key =
+          '${r.date.year}-${r.date.month.toString().padLeft(2, '0')}'
+          '-${r.date.day.toString().padLeft(2, '0')}';
+      byDate.putIfAbsent(key, () => []).add(r);
+    }
+    final sortedDays = byDate.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    int clearRun = 0;
+    for (final day in sortedDays) {
+      final hasDisturber = byDate[day]!.any((r) =>
+          r.wasResentful || r.wasSelfish || r.wasDishonest || r.wasAfraid);
+      if (!hasDisturber) {
+        clearRun++;
+      } else {
+        break;
+      }
+    }
+
+    if (clearRun >= 3) {
+      cards.add(InsightCard(
+        title: 'Clear-day run',
+        value: '$clearRun days',
+        interpretation: clearRun >= 7
+            ? '$clearRun consecutive reviewed days with no disturbers flagged. '
+                'This is emotional sobriety in practice.'
+            : '$clearRun reviewed days in a row with nothing to flag. '
+                'Keep doing the next right thing.',
+        level: InsightLevel.encouraging,
+        icon: Icons.wb_sunny_outlined,
+      ));
+    }
+  }
+
+  // ── 14. Fear work depth ──────────────────────────────────────────────────
+  if (fears.isNotEmpty) {
+    final withPart = fears.where((f) => f.myPart.trim().isNotEmpty).length;
+    final pct = ((withPart / fears.length) * 100).round();
+
+    cards.add(InsightCard(
+      title: 'Fear inventory depth',
+      value: '${fears.length} fear${fears.length == 1 ? '' : 's'}',
+      interpretation: pct >= 80
+          ? 'You\'ve written your part in $withPart of ${fears.length} fears ($pct%). '
+              'Owning your side of fear is where it loses its power over you.'
+          : withPart > 0
+              ? '$withPart of ${fears.length} fears have your part written — '
+                  'completing "my part" is the work that dissolves the fear.'
+              : '${fears.length} fear${fears.length == 1 ? '' : 's'} inventoried. '
+                  'The next layer is identifying your part — what\'s driving each fear.',
+      level: pct >= 80
+          ? InsightLevel.encouraging
+          : pct >= 50
+              ? InsightLevel.neutral
+              : InsightLevel.reflective,
+      icon: Icons.shield_outlined,
+    ));
+  }
+
+  // ── 15. Harms worked ─────────────────────────────────────────────────────
+  if (harms.isNotEmpty) {
+    final withPlan = harms.where((h) =>
+        h.amendsPlan != null && h.amendsPlan!.trim().isNotEmpty).length;
+    final done = harms.where((h) => h.isAmendsDone).length;
+
+    if (withPlan > 0 || done > 0) {
+      final pct = ((done / harms.length) * 100).round();
+      cards.add(InsightCard(
+        title: 'Harms inventory',
+        value: '${harms.length} person${harms.length == 1 ? '' : 's'}',
+        interpretation: done > 0
+            ? '$done of ${harms.length} harms have amends done ($pct%). '
+                '$withPlan have a written plan. '
+                'Each one is a weight put down.'
+            : '$withPlan of ${harms.length} have an amends plan written. '
+                'A plan is the first courageous act.',
+        level: done >= harms.length ~/ 2
+            ? InsightLevel.encouraging
+            : InsightLevel.neutral,
+        icon: Icons.healing_outlined,
+      ));
+    }
+  }
+
+  // ── Empty state ───────────────────────────────────────────────────────────
   if (cards.isEmpty) {
     cards.add(const InsightCard(
       title: 'Your story is just beginning',
@@ -477,7 +567,8 @@ List<InsightCard> _computeInsights({
 // Helper
 // ─────────────────────────────────────────────────────────────────────────────
 
-double _avgDisturbers(List<DailyReview> reviews) {
+/// Average number of disturber flags (0–4) across [reviews].
+double avgDisturbers(List<DailyReview> reviews) {
   if (reviews.isEmpty) return 0;
   final total = reviews.fold<int>(0, (sum, r) {
     int count = 0;

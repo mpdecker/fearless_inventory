@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/database/database.dart';
+import '../../core/navigation/adaptive_page_route.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
 import 'daily_review_screen.dart';
@@ -29,8 +30,7 @@ class DailyReviewHubScreen extends ConsumerWidget {
             tooltip: 'Review history',
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const ReviewHistoryScreen()),
+              adaptivePageRoute((_) => const ReviewHistoryScreen()),
             ),
           ),
         ],
@@ -62,7 +62,7 @@ class DailyReviewHubScreen extends ConsumerWidget {
 
   void _openEntry(BuildContext context) => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const DailyReviewScreen()),
+        adaptivePageRoute((_) => const DailyReviewScreen()),
       );
 }
 

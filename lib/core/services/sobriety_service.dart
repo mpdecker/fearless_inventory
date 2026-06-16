@@ -1,22 +1,20 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'app_secure_storage.dart';
 
 /// Persists the user's sobriety date using the same encrypted secure storage
 /// as the onboarding flag and database key.
 ///
 /// The date is stored as an ISO-8601 date string (YYYY-MM-DD) so it is
 /// timezone-independent — we only care about calendar days, not time.
+///
+/// Storage key is [storageKey]; legacy installs used `sobriety_date_v1`.
 class SobrietyService {
-  // Use EncryptedSharedPreferences on Android — it is more reliable than the
-  // default KeyStore-based backend, especially on emulators and devices that
-  // don't have a screen-lock PIN configured.
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-  static const _key = 'sobriety_date_v1';
+  static const storageKey = 'fearless_sobriety_date';
+  static const _legacyStorageKey = 'sobriety_date_v1';
 
   /// Returns the stored sobriety date, or null if not yet set.
   static Future<DateTime?> getSobrietyDate() async {
-    final val = await _storage.read(key: _key);
+    var val = await appSecureStorage.read(key: storageKey);
+    val ??= await appSecureStorage.read(key: _legacyStorageKey);
     if (val == null) return null;
     return DateTime.tryParse(val);
   }
@@ -27,12 +25,14 @@ class SobrietyService {
         '${date.year.toString().padLeft(4, '0')}-'
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
-    await _storage.write(key: _key, value: iso);
+    await appSecureStorage.write(key: storageKey, value: iso);
+    await appSecureStorage.delete(key: _legacyStorageKey);
   }
 
   /// Removes the stored sobriety date.
   static Future<void> clear() async {
-    await _storage.delete(key: _key);
+    await appSecureStorage.delete(key: storageKey);
+    await appSecureStorage.delete(key: _legacyStorageKey);
   }
 
   // ── Calculations ────────────────────────────────────────────────────────────

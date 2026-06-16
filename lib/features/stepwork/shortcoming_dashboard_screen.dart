@@ -5,6 +5,7 @@ import '../../core/constants/character_defects.dart';
 import '../../core/database/database.dart';
 import '../../core/quotes/recovery_quotes.dart';
 import '../../core/widgets/quote_card.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../data/repositories/shortcomings_repository.dart';
 import '../../data/repositories/defect_repository.dart';
 import 'providers/defect_providers.dart';
@@ -609,7 +610,7 @@ class _LogShortcomingSheetState
           InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: () async {
-              final picked = await showDatePicker(
+              final picked = await showAdaptiveAppDatePicker(
                 context: context,
                 initialDate: _date,
                 firstDate: DateTime(2000),

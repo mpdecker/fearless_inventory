@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../core/database/database.dart';
 import '../../../data/repositories/literature_repository.dart';
 
@@ -46,7 +47,7 @@ const _kBigBook = _BookDef(
   title: 'The Big Book',
   subtitle: 'Alcoholics Anonymous — Fourth Edition',
   icon: Icons.auto_stories_outlined,
-  color: Color(0xFF1A56DB),
+  color: AppColors.literatureLink,
   chapters: [
     _ChapterDef(
       key: 'bb_forewords',
@@ -141,7 +142,7 @@ const _kTwelveTwelve = _BookDef(
   title: 'Twelve Steps and Twelve Traditions',
   subtitle: 'The "12 & 12"',
   icon: Icons.menu_book_outlined,
-  color: Color(0xFF6D28D9),
+  color: AppColors.literatureLinkVisited,
   chapters: [
     _ChapterDef(
       key: 'tt_intro',

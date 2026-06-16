@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "510334238921",
+    "project_id": "fearless-inventory",
+    "storage_bucket": "fearless-inventory.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:510334238921:android:2fc2d88d1cac49b7be0d18",
+        "android_client_info": {
+          "package_name": "com.fearlessinventory.fearless_inventory"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxNIE3E-i6nvk1tPU7vSpMbtRfTVcL6_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

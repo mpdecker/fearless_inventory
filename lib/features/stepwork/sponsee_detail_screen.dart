@@ -6,6 +6,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
+import '../../core/services/seed_data_service.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../core/services/sobriety_service.dart';
 import '../../data/repositories/sponsee_repository.dart';
 import '../../data/repositories/service_commitments_repository.dart';
@@ -979,7 +981,21 @@ class _ReviewImportSheetState extends State<_ReviewImportSheet> {
                     style: TextStyle(
                         color: Colors.red.shade700, fontSize: 12)),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            // Demo helper — pre-fill with Jordan's sample inventory JSON
+            TextButton.icon(
+              onPressed: () => setState(() {
+                _ctrl.text = SeedDataService.sampleSponsorReviewJson;
+                _error = null;
+              }),
+              icon: const Icon(Icons.science_outlined, size: 15),
+              label: const Text('Paste sample data (demo)'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.teal,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: _ctrl.text.trim().isNotEmpty ? _parse : null,
               icon: const Icon(Icons.visibility_outlined, size: 16),
@@ -1268,7 +1284,7 @@ class _AddCheckInSheetState extends ConsumerState<_AddCheckInSheet> {
                     flex: 3,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final d = await showDatePicker(
+                        final d = await showAdaptiveAppDatePicker(
                           context: context,
                           initialDate: _scheduledAt,
                           firstDate: DateTime.now(),
@@ -1287,7 +1303,7 @@ class _AddCheckInSheetState extends ConsumerState<_AddCheckInSheet> {
                     flex: 2,
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final t = await showTimePicker(
+                        final t = await showAdaptiveAppTimePicker(
                           context: context,
                           initialTime: _time,
                         );

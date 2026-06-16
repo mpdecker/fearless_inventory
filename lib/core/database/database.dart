@@ -3,8 +3,10 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/amends_type.dart';
+import '../services/key_service.dart';
 
 part 'database.g.dart';
 
@@ -64,6 +66,9 @@ class DailyReviews extends Table {
   BoolColumn get wasAfraid => boolean().withDefault(const Constant(false))();
   TextColumn get notes => text().nullable()();
   TextColumn get gratitude => text().nullable()();
+  // v15 — which context this review was logged in: 'morning' | 'spot_check' | 'nightly'
+  TextColumn get reviewType =>
+      text().withDefault(const Constant('nightly'))();
   DateTimeColumn get createdAt => dateTime()();
 }
 
@@ -429,6 +434,69 @@ class JournalEntries extends Table {
 }
 
 // ─────────────────────────────────────────────
+// ROLODEX SCHEMA (v14)
+// ─────────────────────────────────────────────
+
+/// A person the user knows from the rooms — potential sponsor, sponsee, or
+/// just a fellow contact.
+///
+/// [isSponsor] — at most one row should have this true at a time; the
+/// RolodexRepository enforces that invariant on write.
+/// [sponseeId] — set when this contact has been promoted to a Sponsee entry.
+/// [meetingId] — the meeting where this person was met (nullable).
+class RolodexContacts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 200)();
+  TextColumn get phone => text().nullable()();
+  TextColumn get email => text().nullable()();
+  TextColumn get address => text().nullable()();
+  TextColumn get notes => text().nullable()();
+
+  /// Meeting where this person was met (nullable; SET NULL on meeting delete).
+  IntColumn get meetingId => integer()
+      .nullable()
+      .references(Meetings, #id, onDelete: KeyAction.setNull)();
+
+  /// True when this contact is the user's current sponsor.
+  /// Only one row should be true at a time — enforced by [RolodexRepository].
+  BoolColumn get isSponsor =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Set when this contact has been converted to a Sponsee entry.
+  /// SET NULL if the linked Sponsee row is deleted.
+  IntColumn get sponseeId => integer()
+      .nullable()
+      .references(Sponsees, #id, onDelete: KeyAction.setNull)();
+
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+}
+
+// ─────────────────────────────────────────────
+// SPONSOR CALL LOG SCHEMA (v13)
+// ─────────────────────────────────────────────
+
+/// Records each confirmed sponsor call — triggered from a scheduled reminder
+/// or logged manually by the user at any time.
+class SponsorCallLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The datetime the reminder notification was scheduled to fire.
+  /// null when the call was logged manually outside a reminder cycle.
+  DateTimeColumn get scheduledFor => dateTime().nullable()();
+
+  /// When the user confirmed the call happened.
+  DateTimeColumn get confirmedAt => dateTime()();
+
+  /// True if the user tapped the in-app "Call Now" button; false = "Already
+  /// called" self-report.
+  BoolColumn get calledViaApp =>
+      boolean().withDefault(const Constant(false))();
+
+  TextColumn get notes => text().nullable()();
+}
+
+// ─────────────────────────────────────────────
 // LITERATURE BOOKMARKS SCHEMA (v12)
 // ─────────────────────────────────────────────
 
@@ -490,13 +558,22 @@ class LiteratureBookmarks extends Table {
   JournalEntries,
   // v12 — Literature bookmarks
   LiteratureBookmarks,
+  // v13 — Sponsor call log
+  SponsorCallLogs,
+  // v14 — Rolodex contacts
+  RolodexContacts,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
   AppDatabase.testing(QueryExecutor executor) : super(executor);
 
+  /// Same schema and encryption as production, backed by [databaseFile] (e.g. a
+  /// temp file in tests).
+  AppDatabase.forTesting(File databaseFile, String encryptionKey)
+      : super(_openConnectionAt(databaseFile, encryptionKey));
+
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -560,6 +637,18 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(meetings, meetings.isPlannedAttendance);
             await m.createTable(literatureBookmarks);
           }
+          // v12 → v13: Sponsor call log
+          if (from < 13) {
+            await m.createTable(sponsorCallLogs);
+          }
+          // v13 → v14: Rolodex contacts
+          if (from < 14) {
+            await m.createTable(rolodexContacts);
+          }
+          // v14 → v15: review type context on daily reviews
+          if (from < 15) {
+            await m.addColumn(dailyReviews, dailyReviews.reviewType);
+          }
         },
       );
 
@@ -573,6 +662,8 @@ class AppDatabase extends _$AppDatabase {
         await delete(resentments).go();
         await delete(defects).go();
         await delete(dailyReviews).go();
+        await delete(step5Completions).go();
+        await delete(meditationSessions).go();
         await delete(stepTwelveEvents).go();
         await delete(attendanceLogs).go();
         await delete(meetings).go();
@@ -584,6 +675,8 @@ class AppDatabase extends _$AppDatabase {
         await delete(sponsees).go();
         await delete(journalEntries).go();
         await delete(literatureBookmarks).go();
+        await delete(sponsorCallLogs).go();
+        await delete(rolodexContacts).go();
       });
 }
 
@@ -591,16 +684,34 @@ class AppDatabase extends _$AppDatabase {
 // CONNECTION FACTORY
 // ─────────────────────────────────────────────
 
+void _configureEncryptedConnection(Database db, String encryptionKey) {
+  // SQLite3MultipleCiphers (bundled via pubspec `hooks` → sqlite3: source: sqlite3mc).
+  // SQLCipher-compatible settings for existing installs that used PRAGMA key + legacy.
+  db.execute("PRAGMA key = '$encryptionKey';");
+  db.execute('PRAGMA cipher = "sqlcipher";');
+  db.execute('PRAGMA legacy = 4;');
+  db.execute('PRAGMA foreign_keys = ON;');
+}
+
+QueryExecutor _openConnectionAt(File file, String encryptionKey) {
+  return LazyDatabase(() async {
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) => _configureEncryptedConnection(db, encryptionKey),
+    );
+  });
+}
+
 QueryExecutor _openConnection(String encryptionKey) {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'fearless_inventory.db'));
-    return NativeDatabase.createInBackground(file, setup: (db) {
-      // Use the per-device key rather than a hard-coded value
-      db.execute("PRAGMA key = '$encryptionKey';");
-      db.execute('PRAGMA cipher = "sqlcipher";');
-      db.execute('PRAGMA legacy = 4;');
-    });
+    final file = File(
+      p.join(dbFolder.path, KeyService.productionDatabaseFileName),
+    );
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) => _configureEncryptedConnection(db, encryptionKey),
+    );
   });
 }
 

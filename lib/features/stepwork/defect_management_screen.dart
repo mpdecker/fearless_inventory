@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../../core/navigation/adaptive_page_route.dart';
 import 'package:drift/drift.dart' hide Column;
 import '../../core/database/database.dart';
 import '../../core/quotes/recovery_quotes.dart';
@@ -25,7 +27,7 @@ class DefectManagementScreen extends ConsumerWidget {
             tooltip: "Discovery Wizard",
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const DefectDiscoveryWizard()),
+              adaptivePageRoute((_) => const DefectDiscoveryWizard()),
             ),
           ),
           IconButton(

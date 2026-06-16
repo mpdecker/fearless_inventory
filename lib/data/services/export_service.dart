@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:csv/csv.dart';
+import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:excel/excel.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/database/database.dart';
 import '../../features/journal/data/step_tradition_content.dart';
@@ -85,12 +88,23 @@ pw.Widget _disclaimer() => pw.Text(
 /// Outputs via the system print/share dialog so it can be printed or
 /// saved to Files without any cloud upload.
 class ExportService {
-  static Future<void> generateBigBookWorksheetPdf({
+  /// App documents subdirectory for shareable exports (persists across sessions;
+  /// visible under the app’s Documents in Files on iOS).
+  static Future<Directory> ensureExportsDirectory() async {
+    final base = await getApplicationDocumentsDirectory();
+    final dir = Directory(p.join(base.path, 'exports'));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  static pw.Document _bigBookWorksheetDocument({
     required List<Resentment> resentments,
     required List<Fear> fears,
     required List<Harm> harms,
     String title = 'Step Four — Personal Inventory',
-  }) async {
+  }) {
     final pdf = pw.Document();
     final dateStr = DateTime.now().toIso8601String().split('T').first;
 
@@ -242,6 +256,37 @@ class ExportService {
       ),
     );
 
+    return pdf;
+  }
+
+  /// Step 4 worksheet PDF bytes (no system print dialog). Use for tests and tooling.
+  static Future<List<int>> buildBigBookWorksheetPdfBytes({
+    required List<Resentment> resentments,
+    required List<Fear> fears,
+    required List<Harm> harms,
+    String title = 'Step Four — Personal Inventory',
+  }) {
+    final doc = _bigBookWorksheetDocument(
+      resentments: resentments,
+      fears: fears,
+      harms: harms,
+      title: title,
+    );
+    return doc.save();
+  }
+
+  static Future<void> generateBigBookWorksheetPdf({
+    required List<Resentment> resentments,
+    required List<Fear> fears,
+    required List<Harm> harms,
+    String title = 'Step Four — Personal Inventory',
+  }) async {
+    final pdf = _bigBookWorksheetDocument(
+      resentments: resentments,
+      fears: fears,
+      harms: harms,
+      title: title,
+    );
     await Printing.layoutPdf(onLayout: (format) => pdf.save());
   }
 
@@ -603,10 +648,15 @@ class ExportService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 4. Excel Amends Tracker (preserved)
+  // 4. Excel / CSV Amends Tracker
   // ─────────────────────────────────────────────────────────────────────────
 
-  static Future<void> exportToExcel(List<Amend> amends) async {
+  static const _xlsxMime =
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+  /// Writes the amends workbook under Documents/exports and returns an [XFile]
+  /// with a MIME type suitable for Numbers / Sheets / Mail.
+  static Future<XFile> buildAmendsExcelXFile(List<Amend> amends) async {
     var excel = Excel.createExcel();
     Sheet sheet = excel['Amends Planner'];
 
@@ -634,13 +684,61 @@ class ExportService {
       ]);
     }
 
-    final directory = await getTemporaryDirectory();
-    final path =
-        '${directory.path}/amends_export_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    final directory = await ensureExportsDirectory();
+    final path = p.join(
+      directory.path,
+      'amends_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+    );
     final file = File(path);
     await file.writeAsBytes(excel.encode()!);
 
-    await Share.shareXFiles([XFile(path)], text: 'My Amends Plan Export');
+    return XFile(path, mimeType: _xlsxMime);
+  }
+
+  static Future<void> exportToExcel(List<Amend> amends) async {
+    final xFile = await buildAmendsExcelXFile(amends);
+    await Share.shareXFiles([xFile], text: 'My Amends Plan Export');
+  }
+
+  /// UTF-8 CSV with BOM (helps Excel detect encoding); same columns as Excel.
+  static Future<XFile> buildAmendsCsvXFile(List<Amend> amends) async {
+    const converter = ListToCsvConverter(eol: '\r\n');
+    final rows = <List<dynamic>>[
+      [
+        'Person',
+        'Type',
+        'Plan',
+        'Status',
+        'Priority',
+        'Date Planned',
+        'Date Completed',
+      ],
+    ];
+    for (final a in amends) {
+      rows.add([
+        a.person,
+        a.amendsType?.name ?? 'unspecified',
+        a.plan ?? '',
+        a.status,
+        a.priority,
+        a.datePlanned?.toIso8601String().split('T').first ?? '',
+        a.dateCompleted?.toIso8601String().split('T').first ?? '',
+      ]);
+    }
+    final csvBody = converter.convert(rows);
+    final directory = await ensureExportsDirectory();
+    final path = p.join(
+      directory.path,
+      'amends_export_${DateTime.now().millisecondsSinceEpoch}.csv',
+    );
+    const bom = '\uFEFF';
+    await File(path).writeAsString('$bom$csvBody', encoding: utf8);
+    return XFile(path, mimeType: 'text/csv');
+  }
+
+  static Future<void> exportToCsv(List<Amend> amends) async {
+    final xFile = await buildAmendsCsvXFile(amends);
+    await Share.shareXFiles([xFile], text: 'My Amends Plan Export (CSV)');
   }
 
   // ── Sponsee Review JSON export ──────────────────────────────────────────
@@ -685,11 +783,12 @@ class ExportService {
 
     final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
 
-    // Share as a text file so the sponsor can save it and paste it.
-    final dir = await getTemporaryDirectory();
-    final path =
-        '${dir.path}/sponsor_review_${DateTime.now().millisecondsSinceEpoch}.json';
-    await File(path).writeAsString(jsonStr);
+    final dir = await ensureExportsDirectory();
+    final path = p.join(
+      dir.path,
+      'sponsor_review_${DateTime.now().millisecondsSinceEpoch}.json',
+    );
+    await File(path).writeAsString(jsonStr, encoding: utf8);
     await Share.shareXFiles(
       [XFile(path, mimeType: 'application/json')],
       subject: 'Fearless Inventory — Step 4 Review',
