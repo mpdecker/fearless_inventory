@@ -71,7 +71,7 @@ void main() {
             (ref) => SobrietyDateNotifier.testing(),
           ),
         ],
-        child: const FearlessInventoryApp(showOnboarding: false),
+        child: const FearlessInventoryApp(initialOnboardingComplete: true),
       ),
     );
 
