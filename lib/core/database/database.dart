@@ -493,6 +493,7 @@ class LiteratureBookmarks extends Table {
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
+  AppDatabase.testing(QueryExecutor executor) : super(executor);
 
   @override
   int get schemaVersion => 12;
