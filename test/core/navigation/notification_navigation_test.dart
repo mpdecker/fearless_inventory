@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:drift/native.dart';
 
 import 'package:fearless_inventory/core/database/database.dart';
 import 'package:fearless_inventory/core/navigation/notification_navigation.dart';
@@ -40,8 +41,8 @@ void main() {
   testWidgets('daily review notification pushes DailyReviewHubScreen',
       (tester) async {
     FlutterSecureStorage.setMockInitialValues({});
-    final (:dir, :dbFile, :db) = await openTempEncryptedDb('fi_nav_review_');
-    addTearDown(() => disposeTempDb(db: db, dir: dir, dbFile: dbFile));
+    final db = AppDatabase.testing(NativeDatabase.memory());
+    addTearDown(() => db.close());
 
     await pumpWithDb(tester, db: db);
 
@@ -56,13 +57,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(DailyReviewHubScreen), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(Duration.zero);
   });
 
   testWidgets('bedtime notification pushes BedtimeMeditationScreen',
       (tester) async {
     FlutterSecureStorage.setMockInitialValues({});
-    final (:dir, :dbFile, :db) = await openTempEncryptedDb('fi_nav_bed_');
-    addTearDown(() => disposeTempDb(db: db, dir: dir, dbFile: dbFile));
+    final db = AppDatabase.testing(NativeDatabase.memory());
+    addTearDown(() => db.close());
 
     await pumpWithDb(tester, db: db);
 
@@ -77,13 +81,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(BedtimeMeditationScreen), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(Duration.zero);
   });
 
   testWidgets('sponsor call notification pushes SponsorCallScreen',
       (tester) async {
     FlutterSecureStorage.setMockInitialValues({});
-    final (:dir, :dbFile, :db) = await openTempEncryptedDb('fi_nav_sponsor_');
-    addTearDown(() => disposeTempDb(db: db, dir: dir, dbFile: dbFile));
+    final db = AppDatabase.testing(NativeDatabase.memory());
+    addTearDown(() => db.close());
 
     await pumpWithDb(tester, db: db);
 
@@ -98,6 +105,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(SponsorCallScreen), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(Duration.zero);
   });
 
   testWidgets('unknown notification id does not push a route', (tester) async {
@@ -119,5 +129,8 @@ void main() {
     await tester.pump();
     expect(find.text('home'), findsOneWidget);
     expect(find.byType(DailyReviewHubScreen), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(Duration.zero);
   });
 }
