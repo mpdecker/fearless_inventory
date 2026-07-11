@@ -52,6 +52,7 @@ void main() {
   });
 
   testWidgets('app boots', (WidgetTester tester) async {
+<<<<<<< Updated upstream
     // Use an in-memory Drift database — no encryption key, no file I/O.
     final db = AppDatabase.testing(NativeDatabase.memory());
 
@@ -75,6 +76,9 @@ void main() {
       ),
     );
 
+=======
+    await tester.pumpWidget(const FearlessInventoryApp(showOnboarding: true));
+>>>>>>> Stashed changes
     expect(find.byType(MaterialApp), findsOneWidget);
 
     // Replace the tree with an empty widget so Riverpod disposes its container
