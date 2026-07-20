@@ -26,6 +26,12 @@ void main() {
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
   testWidgets('HomeScreen bottom navigation switches primary tabs', (tester) async {
+    // `find.bySemanticsLabel` needs the semantics tree, which the simulator
+    // only builds when a screen reader is attached.
+    // Disposed inline at the end of the test: `addTearDown` runs after
+    // flutter_test's end-of-test SemanticsHandle verification.
+    final semantics = tester.ensureSemantics();
+
     for (var i = 1; i <= 4; i++) {
       await OnboardingService.markTabVisited(i);
     }
@@ -89,5 +95,7 @@ void main() {
 
     await tap('Dashboard');
     expect(find.bySemanticsLabel('Fearless Inventory'), findsOneWidget);
+
+    semantics.dispose();
   });
 }

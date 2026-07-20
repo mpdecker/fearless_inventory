@@ -121,7 +121,7 @@ class SettingsScreen extends ConsumerWidget {
                 color: AppColors.literatureLink),
             title: const Text('The Big Book'),
             subtitle: const Text(
-                'Alcoholics Anonymous — chapter navigator with bookmarks'),
+                'Alcoholics Anonymous — searchable text from your bundled PDF'),
             onTap: () => Navigator.of(context).push(
               adaptivePageRoute((_) => const LiteratureScreen(initialTab: 0)),
             ),
@@ -133,7 +133,7 @@ class SettingsScreen extends ConsumerWidget {
                 color: AppColors.literatureLinkVisited),
             title: const Text('Twelve Steps and Twelve Traditions'),
             subtitle: const Text(
-                'The "12 & 12" — step and tradition chapters with bookmarks'),
+                'The "12 & 12" — searchable text from your bundled PDF'),
             onTap: () => Navigator.of(context).push(
               adaptivePageRoute((_) => const LiteratureScreen(initialTab: 1)),
             ),

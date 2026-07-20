@@ -13,6 +13,23 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/database/database.dart';
 import '../../features/journal/data/step_tradition_content.dart';
 
+/// dart_pdf's default Helvetica is a Type1 base font with no Unicode coverage,
+/// so em dashes, ellipses and smart quotes render as blanks in exports. Map the
+/// common typographic forms onto ASCII before they reach the page.
+///
+/// Text outside Latin-1 (CJK, Cyrillic, emoji) still cannot render; that needs
+/// a bundled Unicode TTF.
+String _pdfSafe(String s) => s
+    .replaceAll('\u2014', '--')
+    .replaceAll('\u2013', '-')
+    .replaceAll('\u2026', '...')
+    .replaceAll('\u2018', "'")
+    .replaceAll('\u2019', "'")
+    .replaceAll('\u201C', '"')
+    .replaceAll('\u201D', '"')
+    .replaceAll('\u00A0', ' ');
+
+
 // Affects lookup: DB value → human-readable label
 const _affectsLabels = {
   'self_esteem': 'Self-Esteem',
@@ -60,16 +77,16 @@ pw.Widget _tableCell(String text,
     color: bg,
     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
     alignment: align,
-    child: pw.Text(
-      text,
+    child: pw.Text(_pdfSafe(
+      text),
       style: isHeader ? _label() : _body(),
     ),
   );
 }
 
-pw.Widget _disclaimer() => pw.Text(
+pw.Widget _disclaimer() => pw.Text(_pdfSafe(
       'This document is for personal use with your sponsor. '
-      'Not affiliated with AA World Services, Inc.',
+      'Not affiliated with AA World Services, Inc.'),
       style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500,
           fontStyle: pw.FontStyle.italic),
     );
@@ -115,12 +132,12 @@ class ExportService {
         header: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(title, style: _header0()),
+            pw.Text(_pdfSafe(title), style: _header0()),
             pw.SizedBox(height: 2),
-            pw.Text('Date: $dateStr   |   '
+            pw.Text(_pdfSafe('Date: $dateStr   |   '
                 '${resentments.length} resentments · '
                 '${fears.length} fears · '
-                '${harms.length} harms',
+                '${harms.length} harms'),
                 style: _bodySm()),
             pw.SizedBox(height: 6),
             _disclaimer(),
@@ -129,10 +146,10 @@ class ExportService {
         ),
         build: (context) => [
           // ── Resentments ──────────────────────────────────────────────────
-          pw.Text('RESENTMENTS', style: _header1()),
+          pw.Text(_pdfSafe('RESENTMENTS'), style: _header1()),
           pw.SizedBox(height: 6),
           if (resentments.isEmpty)
-            pw.Text('No resentments recorded.', style: _body())
+            pw.Text(_pdfSafe('No resentments recorded.'), style: _body())
           else
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -175,10 +192,10 @@ class ExportService {
           pw.SizedBox(height: 24),
 
           // ── Fears ────────────────────────────────────────────────────────
-          pw.Text('FEARS', style: _header1()),
+          pw.Text(_pdfSafe('FEARS'), style: _header1()),
           pw.SizedBox(height: 6),
           if (fears.isEmpty)
-            pw.Text('No fears recorded.', style: _body())
+            pw.Text(_pdfSafe('No fears recorded.'), style: _body())
           else
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -213,10 +230,10 @@ class ExportService {
           pw.SizedBox(height: 24),
 
           // ── Harms ────────────────────────────────────────────────────────
-          pw.Text('HARMS TO OTHERS', style: _header1()),
+          pw.Text(_pdfSafe('HARMS TO OTHERS'), style: _header1()),
           pw.SizedBox(height: 6),
           if (harms.isEmpty)
-            pw.Text('No harms recorded.', style: _body())
+            pw.Text(_pdfSafe('No harms recorded.'), style: _body())
           else
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -326,10 +343,10 @@ class ExportService {
         header: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Step Five Preparation — Flagged for Sponsor Review',
+            pw.Text(_pdfSafe('Step Five Preparation — Flagged for Sponsor Review'),
                 style: _header0()),
             pw.SizedBox(height: 2),
-            pw.Text('Date: $dateStr   |   $total item(s) flagged',
+            pw.Text(_pdfSafe('Date: $dateStr   |   $total item(s) flagged'),
                 style: _bodySm()),
             pw.SizedBox(height: 6),
             _disclaimer(),
@@ -339,7 +356,7 @@ class ExportService {
         build: (context) => [
           // ── Flagged Resentments ──────────────────────────────────────────
           if (flaggedResentments.isNotEmpty) ...[
-            pw.Text('RESENTMENTS', style: _header1()),
+            pw.Text(_pdfSafe('RESENTMENTS'), style: _header1()),
             pw.SizedBox(height: 6),
             pw.Table(
               border:
@@ -385,7 +402,7 @@ class ExportService {
 
           // ── Flagged Fears ────────────────────────────────────────────────
           if (flaggedFears.isNotEmpty) ...[
-            pw.Text('FEARS', style: _header1()),
+            pw.Text(_pdfSafe('FEARS'), style: _header1()),
             pw.SizedBox(height: 6),
             pw.Table(
               border:
@@ -426,7 +443,7 @@ class ExportService {
 
           // ── Flagged Harms ────────────────────────────────────────────────
           if (flaggedHarms.isNotEmpty) ...[
-            pw.Text('HARMS TO OTHERS', style: _header1()),
+            pw.Text(_pdfSafe('HARMS TO OTHERS'), style: _header1()),
             pw.SizedBox(height: 6),
             pw.Table(
               border:
@@ -496,12 +513,12 @@ class ExportService {
           children: [
             pw.Center(
               child: pw.Column(children: [
-                pw.Text('Step Five', style: pw.TextStyle(
+                pw.Text(_pdfSafe('Step Five'), style: pw.TextStyle(
                     fontSize: 28, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 6),
-                pw.Text(
+                pw.Text(_pdfSafe(
                   'Admitted to God, to ourselves, and to another human being\n'
-                  'the exact nature of our wrongs.',
+                  'the exact nature of our wrongs.'),
                   style: pw.TextStyle(
                       fontSize: 12, fontStyle: pw.FontStyle.italic,
                       color: PdfColors.grey700),
@@ -514,7 +531,7 @@ class ExportService {
             pw.SizedBox(height: 24),
 
             // Inventory summary
-            pw.Text('Inventory Reviewed', style: _header1()),
+            pw.Text(_pdfSafe('Inventory Reviewed'), style: _header1()),
             pw.SizedBox(height: 10),
             pw.Row(children: [
               pw.Expanded(child: _summaryBox(
@@ -527,7 +544,7 @@ class ExportService {
             pw.SizedBox(height: 28),
 
             // Three admissions
-            pw.Text('Three Admissions Confirmed', style: _header1()),
+            pw.Text(_pdfSafe('Three Admissions Confirmed'), style: _header1()),
             pw.SizedBox(height: 12),
             _admissionRow('1', 'Admitted to myself'),
             pw.SizedBox(height: 8),
@@ -537,14 +554,14 @@ class ExportService {
             pw.SizedBox(height: 28),
 
             if (reflection != null && reflection.isNotEmpty) ...[
-              pw.Text('Personal Reflection', style: _header1()),
+              pw.Text(_pdfSafe('Personal Reflection'), style: _header1()),
               pw.SizedBox(height: 8),
               pw.Container(
                 padding: const pw.EdgeInsets.all(12),
                 decoration: pw.BoxDecoration(
                     border: pw.Border.all(color: PdfColors.grey300),
                     borderRadius: pw.BorderRadius.circular(4)),
-                child: pw.Text(reflection, style: _body()),
+                child: pw.Text(_pdfSafe(reflection), style: _body()),
               ),
               pw.SizedBox(height: 28),
             ],
@@ -555,7 +572,7 @@ class ExportService {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Completed: $dateStr',
+                pw.Text(_pdfSafe('Completed: $dateStr'),
                     style: _bodySm()
                         .copyWith(color: PdfColors.grey600)),
                 _disclaimer(),
@@ -577,11 +594,11 @@ class ExportService {
             borderRadius: pw.BorderRadius.circular(6)),
         child: pw.Column(
           children: [
-            pw.Text(value,
+            pw.Text(_pdfSafe(value),
                 style: pw.TextStyle(
                     fontSize: 22, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 4),
-            pw.Text(label, style: _bodySm()),
+            pw.Text(_pdfSafe(label), style: _bodySm()),
           ],
         ),
       );
@@ -596,12 +613,12 @@ class ExportService {
               shape: pw.BoxShape.circle,
             ),
             alignment: pw.Alignment.center,
-            child: pw.Text(num,
+            child: pw.Text(_pdfSafe(num),
                 style: pw.TextStyle(
                     fontSize: 11, fontWeight: pw.FontWeight.bold)),
           ),
           pw.SizedBox(width: 10),
-          pw.Text('✓  $text', style: _body()),
+          pw.Text(_pdfSafe('✓  $text'), style: _body()),
         ],
       );
 
@@ -622,23 +639,23 @@ class ExportService {
         pageFormat: PdfPageFormat.a4,
         build: (context) => [
           pw.Header(level: 0, text: 'Personal Inventory Report'),
-          pw.Text(
-              'Generated on ${DateTime.now().toString().split(' ')[0]}'),
+          pw.Text(_pdfSafe(
+              'Generated on ${DateTime.now().toString().split(' ')[0]}')),
           pw.Divider(),
           pw.Header(level: 1, text: 'Resentments'),
           ...resentments.map((r) => pw.Padding(
                 padding:
                     const pw.EdgeInsets.symmetric(vertical: 4),
-                child: pw.Text(
-                    '• ${r.person}: ${r.cause} (Affects: ${_formatAffects(r.affects)})'),
+                child: pw.Text(_pdfSafe(
+                    '• ${r.person}: ${r.cause} (Affects: ${_formatAffects(r.affects)})')),
               )),
           pw.Header(level: 1, text: 'Fears'),
           ...fears.map((f) => pw.Bullet(text: '${f.subject}: ${f.why}')),
           pw.Header(level: 1, text: 'Daily Review Patterns (Last 10 Days)'),
-          ...reviews.take(10).map((rev) => pw.Text(
+          ...reviews.take(10).map((rev) => pw.Text(_pdfSafe(
                 '${rev.date.toString().split(' ')[0]}: '
                 '${rev.wasResentful ? '[Resentment] ' : ''}'
-                '${rev.wasAfraid ? '[Fear] ' : ''}',
+                '${rev.wasAfraid ? '[Fear] ' : ''}'),
               )),
         ],
       ),
@@ -843,8 +860,8 @@ class ExportService {
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             pw.Spacer(),
-            pw.Text(
-              journalTitle,
+            pw.Text(_pdfSafe(
+              journalTitle),
               style: pw.TextStyle(
                 fontSize: 32,
                 fontWeight: pw.FontWeight.bold,
@@ -859,8 +876,8 @@ class ExportService {
               color: PdfColors.blueGrey300,
             ),
             pw.SizedBox(height: 20),
-            pw.Text(
-              dateRange,
+            pw.Text(_pdfSafe(
+              dateRange),
               style: pw.TextStyle(
                 fontSize: 13,
                 color: PdfColors.blueGrey500,
@@ -868,8 +885,8 @@ class ExportService {
               ),
             ),
             pw.SizedBox(height: 8),
-            pw.Text(
-              '${sorted.length} ${sorted.length == 1 ? "entry" : "entries"}',
+            pw.Text(_pdfSafe(
+              '${sorted.length} ${sorted.length == 1 ? "entry" : "entries"}'),
               style: const pw.TextStyle(
                   fontSize: 12, color: PdfColors.blueGrey400),
             ),
@@ -903,8 +920,8 @@ class ExportService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    groupLabel.toUpperCase(),
+                  pw.Text(_pdfSafe(
+                    groupLabel.toUpperCase()),
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
@@ -912,8 +929,8 @@ class ExportService {
                       letterSpacing: 1.5,
                     ),
                   ),
-                  pw.Text(
-                    journalTitle,
+                  pw.Text(_pdfSafe(
+                    journalTitle),
                     style: const pw.TextStyle(
                       fontSize: 9,
                       color: PdfColors.blueGrey400,
@@ -929,13 +946,13 @@ class ExportService {
           footer: (ctx) => pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(
-                'Personal use only. Not affiliated with AA World Services.',
+              pw.Text(_pdfSafe(
+                'Personal use only. Not affiliated with AA World Services.'),
                 style: const pw.TextStyle(
                     fontSize: 7, color: PdfColors.blueGrey300),
               ),
-              pw.Text(
-                'Page ${ctx.pageNumber}',
+              pw.Text(_pdfSafe(
+                'Page ${ctx.pageNumber}'),
                 style: const pw.TextStyle(
                     fontSize: 8, color: PdfColors.blueGrey400),
               ),
@@ -967,8 +984,8 @@ class ExportService {
       JournalEntry e, DateFormat dateFmt) {
     return [
       // Date header
-      pw.Text(
-        dateFmt.format(e.createdAt),
+      pw.Text(_pdfSafe(
+        dateFmt.format(e.createdAt)),
         style: pw.TextStyle(
           fontSize: 10,
           color: PdfColors.blueGrey400,
@@ -978,8 +995,8 @@ class ExportService {
       pw.SizedBox(height: 8),
       // Optional title
       if (e.title != null && e.title!.isNotEmpty) ...[
-        pw.Text(
-          e.title!,
+        pw.Text(_pdfSafe(
+          e.title!),
           style: pw.TextStyle(
             fontSize: 16,
             fontWeight: pw.FontWeight.bold,
@@ -989,8 +1006,8 @@ class ExportService {
         pw.SizedBox(height: 10),
       ],
       // Body
-      pw.Text(
-        e.content,
+      pw.Text(_pdfSafe(
+        e.content),
         style: const pw.TextStyle(
           fontSize: 11,
           color: PdfColors.blueGrey900,
