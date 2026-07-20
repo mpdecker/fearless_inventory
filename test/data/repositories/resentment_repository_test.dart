@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:fearless_inventory/core/database/database.dart';
 import 'package:fearless_inventory/data/repositories/resentment_repository.dart';

@@ -1,6 +1,5 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart'; // Fixes 'StreamProvider' error
 import '../../../data/repositories/review_repository.dart'; // Fixes 'reviewRepositoryProvider' error
-import '../../../core/database/database.dart';
 
 class DayReflection {
   final DateTime date;

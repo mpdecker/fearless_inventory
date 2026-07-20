@@ -14,5 +14,8 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter analyze
+      # Errors and warnings fail the build; lint infos do not. Most infos are
+      # `withOpacity` deprecations from Flutter SDK churn, and gating on them
+      # meant any SDK bump turned CI red without the code changing.
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test

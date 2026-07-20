@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/app_lock_provider.dart';
-import '../../../core/services/biometric_service.dart';
 import '../../../core/services/pin_service.dart';
 import '../widgets/pin_pad.dart';
 

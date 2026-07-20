@@ -351,9 +351,9 @@ class _BrowseTab extends HookConsumerWidget {
                       hiddenCount: 0,
                       onRefresh: () {
                         if (activeLocation.fromGps) {
-                          ref.refresh(userLocationProvider);
+                          ref.invalidate(userLocationProvider);
                         } else {
-                          ref.refresh(geocodedLocationProvider);
+                          ref.invalidate(geocodedLocationProvider);
                         }
                       },
                     ),
@@ -470,7 +470,7 @@ class _SearchTab extends HookConsumerWidget {
                   ref.read(searchLocationEnabledProvider.notifier).state = on;
                   if (on && activeLocation == null) {
                     // Kick off location resolution if not yet available.
-                    ref.refresh(userLocationProvider);
+                    ref.invalidate(userLocationProvider);
                   }
                 },
                 visualDensity: VisualDensity.compact,
@@ -611,82 +611,6 @@ class _ActiveLocationBanner extends StatelessWidget {
             onPressed: onRefresh,
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Location unavailable state ───────────────────────────────────────────────
-
-class _LocationUnavailable extends StatelessWidget {
-  final bool hasCustomQuery;
-  final VoidCallback onRetryGps;
-  const _LocationUnavailable(
-      {required this.hasCustomQuery, required this.onRetryGps});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.location_off_outlined,
-                size: 56, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              hasCustomQuery
-                  ? 'Location not found. Try a different zip code or city name.'
-                  : 'Location unavailable. Enter a zip code or city above, or enable GPS.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: Colors.grey.shade600, height: 1.5, fontSize: 14),
-            ),
-            if (!hasCustomQuery) ...[
-              const SizedBox(height: 20),
-              OutlinedButton.icon(
-                onPressed: onRetryGps,
-                icon: const Icon(Icons.my_location, size: 18),
-                label: const Text('Retry GPS'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LocationError extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _LocationError({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.location_off_outlined,
-                size: 56, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, height: 1.5),
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Try Again'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -860,7 +784,7 @@ class _FilterSheet extends HookConsumerWidget {
                             ref.read(locationQueryProvider.notifier).state =
                                 trimmed;
                             if (trimmed.isNotEmpty) {
-                              ref.refresh(geocodedLocationProvider);
+                              ref.invalidate(geocodedLocationProvider);
                             }
                           },
                           decoration: InputDecoration(
@@ -913,7 +837,7 @@ class _FilterSheet extends HookConsumerWidget {
                             if (perm == LocationPermission.denied) {
                               perm = await Geolocator.requestPermission();
                             }
-                            ref.refresh(userLocationProvider);
+                            ref.invalidate(userLocationProvider);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(10),

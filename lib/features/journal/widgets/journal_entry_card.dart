@@ -8,7 +8,6 @@ import '../../../core/database/database.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 final _dateFmt = DateFormat('MMM d, yyyy');
-final _timeFmt = DateFormat('h:mm a');
 
 String _contextLabel(JournalEntry entry) {
   if (entry.stepNumber != null) return 'Step ${entry.stepNumber}';
