@@ -129,6 +129,10 @@ class AppBrandingAppBarTitle extends StatelessWidget {
 
     return Semantics(
       label: 'Fearless Inventory',
+      // Own node, so the wordmark reads as one name instead of the
+      // "Fearless" / "Inventory" fragments the two [Text] children produce.
+      container: true,
+      excludeSemantics: true,
       child: Align(
         alignment: Alignment.centerLeft,
         child: mark,
