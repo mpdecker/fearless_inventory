@@ -9,6 +9,12 @@ import 'package:fearless_inventory/core/database/database.dart';
 const kTestDatabaseKey =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
+/// Opens an encrypted [AppDatabase] on disk under a unique temp directory.
+///
+/// When called from **[testWidgets]**, do not `await` this on the main test
+/// zone: open the DB inside [WidgetTester.runAsync], or call
+/// `openTempEncryptedDbForWidgetTest` from
+/// `test/support/widget_encrypted_db_binding.dart`.
 Future<({Directory dir, File dbFile, AppDatabase db})> openTempEncryptedDb(
   String tempPrefix,
 ) async {
@@ -38,10 +44,7 @@ Future<void> disposeTempDb({
 ProviderContainer containerWithDatabase(AppDatabase db) {
   return ProviderContainer(
     overrides: [
-      databaseProvider.overrideWith((ref) {
-        ref.onDispose(() {});
-        return db;
-      }),
+      databaseProvider.overrideWithValue(db),
     ],
   );
 }

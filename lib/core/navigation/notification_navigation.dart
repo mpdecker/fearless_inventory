@@ -9,6 +9,11 @@ import '../../features/sponsor_call/sponsor_call_screen.dart';
 
 /// Routes the user from a local notification tap (foreground, background, or
 /// cold start after [NotificationService.processPendingLaunchNotification]).
+///
+/// Call only when [rootNavigatorKey] is already attached (first frame has
+/// pumped). Cold-start taps are deferred via
+/// [NotificationService.processPendingLaunchNotification] in a post-frame
+/// callback for that reason.
 void navigateFromNotificationTap(NotificationResponse response) {
   final nav = rootNavigatorKey.currentState;
   if (nav == null) return;
