@@ -1,75 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:drift/drift.dart' hide Column;
-import '../../core/database/database.dart';
-import '../../data/services/reflection_service.dart';
+import 'package:intl/intl.dart';
+import '../../core/providers/daily_aa_reflection_provider.dart';
 import '../../data/repositories/meditation_repository.dart';
 import '../../core/widgets/meditation_timer.dart';
 import 'morning_transition_screen.dart';
 import '../review/daily_review_screen.dart';
 import '../review/review_type.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// autoDispose ensures the reflection is recomputed on every screen open
-/// so today's Step-10 signals are always included.
-final step11ReflectionProvider =
-    FutureProvider.autoDispose<Reflection?>((ref) async {
-  final db = ref.read(databaseProvider);
-
-  // ── Step 1: gather weights & recency map from DB ─────────────────────────
-  // Wrapped in try-catch: if the meditation_sessions table doesn't exist yet
-  // (e.g. build_runner hasn't been run, or migration pending), we gracefully
-  // fall back to empty maps so a reflection still loads.
-  var themeWeights = <String, double>{};
-  var recentKeys   = <String, DateTime>{};
-
-  try {
-    final repo = ref.read(meditationRepositoryProvider);
-    final results = await Future.wait([
-      repo.getThemeWeights(),
-      repo.getRecentReflectionKeys(),
-    ]);
-    themeWeights = Map<String, double>.from(results[0] as Map);
-    recentKeys   = Map<String, DateTime>.from(results[1] as Map);
-  } catch (_) {
-    // DB not fully migrated yet — continue with empty maps; default themes apply
-  }
-
-  // ── Step 2: boost today's active signals ─────────────────────────────────
-  try {
-    final lastReview = await (db.select(db.dailyReviews)
-          ..orderBy(
-              [(t) => OrderingTerm(expression: t.date, mode: OrderingMode.desc)])
-          ..limit(1))
-        .getSingleOrNull();
-
-    if (lastReview != null) {
-      void boost(bool flag, String signal) {
-        if (!flag) return;
-        for (final theme
-            in ReflectionService.signalToThemes[signal] ?? <String>[]) {
-          themeWeights[theme] = (themeWeights[theme] ?? 0) + 2.0;
-        }
-      }
-      boost(lastReview.wasResentful, 'resentful');
-      boost(lastReview.wasAfraid,    'afraid');
-      boost(lastReview.wasDishonest, 'dishonest');
-      boost(lastReview.wasSelfish,   'selfish');
-    }
-  } catch (_) {
-    // Ignore — weighting without today's signals is fine
-  }
-
-  // ── Step 3: select reflection ─────────────────────────────────────────────
-  return ReflectionService().selectWeighted(
-    themeWeights: themeWeights,
-    recentKeys: recentKeys,
-  );
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -80,7 +18,7 @@ class Step11MeditationScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final meditationAsync = ref.watch(step11ReflectionProvider);
+    final reflectionAsync = ref.watch(dailyAaReflectionBodyProvider);
     final sessionSaved    = useState(false);
 
     return Scaffold(
@@ -92,12 +30,12 @@ class Step11MeditationScreen extends HookConsumerWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.indigo.shade800,
       ),
-      body: meditationAsync.when(
-        data: (reflection) => reflection == null
-            ? _buildEmpty()
-            : _buildContent(context, ref, reflection, sessionSaved),
+      body: reflectionAsync.when(
+        data: (body) => body != null && body.trim().length > 40
+            ? _buildContent(context, ref, body.trim(), sessionSaved)
+            : _buildEmpty(),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => _buildEmpty(),
       ),
     );
   }
@@ -109,8 +47,8 @@ class Step11MeditationScreen extends HookConsumerWidget {
       child: Padding(
         padding: EdgeInsets.all(32),
         child: Text(
-          'No reflection could be loaded.\n'
-          'Check that assets/data/recovery_reflections.csv is present.',
+          'Today\'s Daily Reflection could not be loaded.\n'
+          'Ensure the AA Daily Reflections PDF is bundled.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey, fontSize: 15, height: 1.5),
         ),
@@ -123,7 +61,7 @@ class Step11MeditationScreen extends HookConsumerWidget {
   Widget _buildContent(
     BuildContext context,
     WidgetRef ref,
-    Reflection reflection,
+    String body,
     ValueNotifier<bool> sessionSaved,
   ) {
     return SingleChildScrollView(
@@ -131,54 +69,28 @@ class Step11MeditationScreen extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Theme badge ────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.indigo.shade50,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'MEDITATION THEME: ${reflection.theme.toUpperCase()}',
-              style: TextStyle(
-                color: Colors.indigo.shade900,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-                letterSpacing: 1.1,
-              ),
+          // ── Header ────────────────────────────────────────────────────
+          Text(
+            'AA Daily Reflection',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.indigo.shade800,
             ),
           ),
-          const SizedBox(height: 26),
-
-          // ── Quote ──────────────────────────────────────────────────────
+          const SizedBox(height: 4),
           Text(
-            reflection.quote,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w300,
-              fontStyle: FontStyle.italic,
-              height: 1.45,
-              color: Colors.black87,
-            ),
+            DateFormat.yMMMMd().format(DateTime.now()),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 28),
+            padding: EdgeInsets.symmetric(vertical: 20),
             child: Divider(thickness: 0.5),
           ),
 
           // ── Reflection body ────────────────────────────────────────────
-          Text(
-            'THE REFLECTION',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: Colors.indigo.shade700,
-              letterSpacing: 1.05,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            reflection.reflection,
+          SelectableText(
+            body,
             style: const TextStyle(
               fontSize: 16,
               height: 1.65,
@@ -218,8 +130,8 @@ class Step11MeditationScreen extends HookConsumerWidget {
             onSave: (seconds) async {
               await ref.read(meditationRepositoryProvider).saveSession(
                     sessionType:     'morning',
-                    reflectionTheme: reflection.theme,
-                    reflectionKey:   reflection.reflectionKey,
+                    reflectionTheme: 'daily_reflection',
+                    reflectionKey:   'daily_reflection',
                     durationSeconds: seconds,
                   );
               sessionSaved.value = true;
@@ -231,8 +143,7 @@ class Step11MeditationScreen extends HookConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pushReplacement(
               PageRouteBuilder<void>(
-                pageBuilder: (_, __, ___) =>
-                    const MorningTransitionScreen(),
+                pageBuilder: (_, __, ___) => const MorningTransitionScreen(),
                 transitionsBuilder: (_, anim, __, child) =>
                     FadeTransition(opacity: anim, child: child),
                 transitionDuration: const Duration(milliseconds: 700),

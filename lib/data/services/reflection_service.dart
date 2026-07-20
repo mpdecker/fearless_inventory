@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 
+import '../../core/literature/preprocessed_literature_store.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Model
 // ─────────────────────────────────────────────────────────────────────────────
@@ -232,9 +234,12 @@ class ReflectionService {
 
   // ── Internal helpers ────────────────────────────────────────────────────────
 
-  /// Loads the reflections JSON asset and returns it as a list of maps.
-  /// Each map has keys: 'theme', 'quote', 'reflection'.
+  /// Loads As Bill Sees It passages (preprocessed / PDF), then falls back to
+  /// [recovery_reflections.json] if extraction is unavailable.
   Future<List<Map<String, dynamic>>> _loadRows() async {
+    final absi = await PreprocessedLiteratureStore.instance.loadReflectionRows();
+    if (absi.isNotEmpty) return absi;
+
     final raw = await rootBundle
         .loadString('assets/data/recovery_reflections.json');
     final decoded = json.decode(raw);

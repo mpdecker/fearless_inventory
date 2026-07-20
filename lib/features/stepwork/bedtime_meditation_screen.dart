@@ -15,10 +15,24 @@ import '../review/review_type.dart';
 // Provider
 // ─────────────────────────────────────────────────────────────────────────────
 
+// One ABSI reflection per calendar day — same quote on every re-open.
+Reflection? _cachedEveningReflection;
+String?     _cachedEveningDate;
+
+String _eveningDateKey() {
+  final n = DateTime.now();
+  return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+}
+
 /// Evening Step 11: reflection biased toward trust, letting go, gratitude,
-/// and rest — while still honouring today's active Step-10 signals.
+/// and rest — pinned once per day.
 final bedtimeReflectionProvider =
     FutureProvider.autoDispose<Reflection?>((ref) async {
+  final today = _eveningDateKey();
+  if (_cachedEveningDate == today && _cachedEveningReflection != null) {
+    return _cachedEveningReflection;
+  }
+
   final db = ref.read(databaseProvider);
 
   // ── Step 1: gather weights & recency map ─────────────────────────────────
@@ -33,9 +47,7 @@ final bedtimeReflectionProvider =
     ]);
     themeWeights = Map<String, double>.from(results[0] as Map);
     recentKeys   = Map<String, DateTime>.from(results[1] as Map);
-  } catch (_) {
-    // DB not fully migrated yet — continue with empty maps
-  }
+  } catch (_) {}
 
   // ── Step 2: boost today's active signals ─────────────────────────────────
   try {
@@ -58,24 +70,23 @@ final bedtimeReflectionProvider =
       boost(lastReview.wasDishonest, 'dishonest');
       boost(lastReview.wasSelfish,   'selfish');
     }
-  } catch (_) {
-    // Ignore — evening calm themes still apply
-  }
+  } catch (_) {}
 
-  // ── Step 3: select with evening calm bias ─────────────────────────────────
-  // These themes are added with a base weight of 1.0 each so they always have
-  // some presence, even with no Step-10 signals.
+  // ── Step 3: select with evening calm bias and pin for the day ────────────
   const bedtimeCalmThemes = [
     'letting go', 'trust', 'gratitude', 'balance', 'mindfulness',
     'faith', 'compassion', 'patience', 'acceptance', 'humility',
     'reflection', 'hope',
   ];
 
-  return ReflectionService().selectWeighted(
+  final result = await ReflectionService().selectWeighted(
     themeWeights: themeWeights,
     recentKeys: recentKeys,
     extraThemes: bedtimeCalmThemes,
   );
+  _cachedEveningDate       = today;
+  _cachedEveningReflection = result;
+  return result;
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +138,7 @@ class BedtimeMeditationScreen extends HookConsumerWidget {
         padding: EdgeInsets.all(32),
         child: Text(
           'No reflection could be loaded.\n'
-          'Check that assets/data/recovery_reflections.csv is present.',
+          'Ensure As Bill Sees It PDF is bundled, or add assets/data/as_bill_sees_it_reflections.json.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white38, fontSize: 15, height: 1.5),
         ),

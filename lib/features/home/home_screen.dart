@@ -23,6 +23,7 @@ import '../settings/settings_screen.dart';
 import '../review/providers/streak_provider.dart';
 import '../../core/providers/sobriety_provider.dart';
 import '../../core/services/sobriety_service.dart';
+import '../../core/providers/daily_aa_reflection_provider.dart';
 import '../../core/services/onboarding_service.dart';
 
 // Stepwork Imports
@@ -285,7 +286,7 @@ class _HomeDashboardView extends StatelessWidget {
       children: [
         const _SobrietyCard(),
         const _StreakHeader(),
-        const _DailyQuoteBanner(),
+        const _DailyReadingOrQuoteBanner(),
 
         // DAILY MAINTENANCE
         _buildSectionHeader("DAILY MAINTENANCE"),
@@ -445,10 +446,6 @@ class _HomeDashboardView extends StatelessWidget {
   }
 }
 
-// ── Daily quote banner ────────────────────────────────────────────────────────
-// Cycles through the Promises quotes based on day-of-year so it changes
-// daily without requiring a network call.
-
 const _dashboardQuotes = [
   RecoveryQuotes.promises,
   RecoveryQuotes.dailyReprieve,
@@ -459,11 +456,86 @@ const _dashboardQuotes = [
   RecoveryQuotes.selfWill,
 ];
 
-class _DailyQuoteBanner extends StatelessWidget {
-  const _DailyQuoteBanner();
+// ── Daily: AA Daily Reflection when preprocessed, else rotating quotes ───────
+
+class _DailyReadingOrQuoteBanner extends ConsumerWidget {
+  const _DailyReadingOrQuoteBanner();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncDaily = ref.watch(dailyAaReflectionBodyProvider);
+    return asyncDaily.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => _legacyQuoteBanner(context),
+      data: (body) {
+        if (body != null && body.trim().length > 40) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AA Daily Reflection',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.indigo.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      DateFormat.yMMMMd().format(DateTime.now()),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 200,
+                      child: Scrollbar(
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            body.trim(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return _legacyQuoteBanner(context);
+      },
+    );
+  }
+
+  Widget _legacyQuoteBanner(BuildContext context) {
     final dayIndex = DateTime.now().dayOfYear % _dashboardQuotes.length;
     final quote = _dashboardQuotes[dayIndex];
     return Padding(

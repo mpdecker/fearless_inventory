@@ -694,7 +694,11 @@ void _configureEncryptedConnection(Database db, String encryptionKey) {
 
 QueryExecutor _openConnectionAt(File file, String encryptionKey) {
   return LazyDatabase(() async {
-    return NativeDatabase.createInBackground(
+    // [AppDatabase.forTesting] only: keep SQLite on the main isolate. Using
+    // [NativeDatabase.createInBackground] under [testWidgets] + an early
+    // [WidgetTester.pump] can stall indefinitely waiting on the isolate port
+    // (e.g. notification_navigation_test.dart).
+    return NativeDatabase(
       file,
       setup: (db) => _configureEncryptedConnection(db, encryptionKey),
     );
