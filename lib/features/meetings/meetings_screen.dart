@@ -94,7 +94,9 @@ class _MeetingsScreenState extends ConsumerState<MeetingsScreen>
     // isn't blocked. Sync only fires if data is stale (never synced or
     // last sync > 24 hours ago); otherwise it's a no-op.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(meetingSyncProvider.notifier).autoSyncIfStale();
+      if (mounted) {
+        ref.read(meetingSyncProvider.notifier).autoSyncIfStale();
+      }
     });
   }
 

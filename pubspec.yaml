@@ -89,6 +89,7 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^3.0.0
+  flutter_riverpod: ^2.4.9
 
   # App launcher icons (Android mipmaps + iOS AppIcon.appiconset)
   flutter_launcher_icons: ^0.14.3

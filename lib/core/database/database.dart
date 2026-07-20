@@ -565,6 +565,7 @@ class LiteratureBookmarks extends Table {
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
+  AppDatabase.testing(QueryExecutor executor) : super(executor);
 
   /// Same schema and encryption as production, backed by [databaseFile] (e.g. a
   /// temp file in tests).

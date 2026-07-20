@@ -11,8 +11,8 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    # Vendored package sample app — not part of the Fearless Inventory product.
-    - packages/flutter_contacts/example_full/**
+    # Vendored package — analyzed separately within its own package scope.
+    - packages/flutter_contacts/**
 
 linter:
   # The lint rules applied to this project can be customized in the
