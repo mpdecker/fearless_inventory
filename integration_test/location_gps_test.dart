@@ -11,15 +11,20 @@ import 'package:integration_test/integration_test.dart';
 /// permission granted (tap "Allow While Using App" when prompted):
 ///
 /// ```bash
-/// RUN_LOCATION_IT=1 flutter test integration_test/location_gps_test.dart
+/// flutter test integration_test/location_gps_test.dart \
+///   --dart-define=RUN_LOCATION_IT=true
 /// ```
 ///
-/// CI and default `flutter test` skip this file unless `RUN_LOCATION_IT=1`
-/// is set, so pipelines stay green without a GPS fixture.
+/// CI and default `flutter test` skip this file unless that define is passed,
+/// so pipelines stay green without a GPS fixture.
+///
+/// The gate must be a compile-time define, not [Platform.environment]: the
+/// test body runs in the Dart VM on the device, which does not inherit the
+/// host shell's environment, so a `RUN_LOCATION_IT=1` prefix never reached it.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final runGpsIntegration = Platform.environment['RUN_LOCATION_IT'] == '1';
+  const runGpsIntegration = bool.fromEnvironment('RUN_LOCATION_IT');
 
   testWidgets(
     'GPS returns coordinates when location is permitted',
