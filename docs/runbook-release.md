@@ -21,7 +21,7 @@ Step-by-step procedure for building and releasing **Fearless Inventory** to the 
 | **SQLite native** | `pubspec.yaml` hooks: `sqlite3` with **`source: sqlite3mc`** (SQLCipher-compatible builds via the Flutter build hook) |
 | **Firebase** | Initialized in `lib/main.dart` via `Firebase.initializeApp` + `lib/firebase_options.dart`. **Android:** `com.google.gms.google-services` in `android/app/build.gradle.kts`, config `android/app/google-services.json`. **iOS:** `ios/Runner/GoogleService-Info.plist` in the Xcode project. **`firebase.json`** records FlutterFire outputs. |
 | **Android application ID** | `com.fearlessinventory.fearless_inventory` (`android/app/build.gradle.kts`) |
-| **iOS bundle ID** | `com.happydestiny.happydestiny` (`ios/Runner.xcodeproj/project.pbxproj` — `PRODUCT_BUNDLE_IDENTIFIER`) |
+| **iOS bundle ID** | `com.fearlessinventory.fearless_inventory` (`ios/Runner.xcodeproj/project.pbxproj` — `PRODUCT_BUNDLE_IDENTIFIER`) |
 | **Icons** | `flutter_launcher_icons` in `pubspec.yaml` (`assets/branding/…`) |
 
 ### Android release signing (important)
@@ -47,7 +47,7 @@ As of this writing, `android/app/build.gradle.kts` sets **`release` to use the d
 ### iOS (App Store)
 
 - [ ] **Apple Developer Program** membership (paid).
-- [ ] **Bundle ID** in [Apple Developer → Identifiers](https://developer.apple.com/account/resources/identifiers/list) matches **`com.happydestiny.happydestiny`** (or change the Xcode project and Firebase iOS app to a single consistent ID).
+- [ ] **Bundle ID** in [Apple Developer → Identifiers](https://developer.apple.com/account/resources/identifiers/list) matches **`com.fearlessinventory.fearless_inventory`** (or change the Xcode project and Firebase iOS app to a single consistent ID).
 - [ ] **Distribution certificate** + **App Store provisioning profile** (or automatic signing in Xcode with the correct team).
 - [ ] If you ship **Google Sign-In**, App Store review typically expects **Sign in with Apple** for the same account features — the app already depends on `sign_in_with_apple`; ensure capability and App Store Connect configuration match.
 
@@ -194,7 +194,7 @@ storeFile=<absolute-or-relative-path-to-upload-keystore.jks>
 ### C0. One-time: Identifiers and capabilities
 
 1. [Apple Developer](https://developer.apple.com/account) → **Certificates, Identifiers & Profiles** → **Identifiers**.
-2. Register an **App ID** matching **`com.happydestiny.happydestiny`** (or your chosen bundle ID if you change Xcode).
+2. Register an **App ID** matching **`com.fearlessinventory.fearless_inventory`** (or your chosen bundle ID if you change Xcode).
 3. Enable required **capabilities** (e.g. **Sign In with Apple**, **Push Notifications** if you use APNs with Firebase, **Associated Domains** if needed for OAuth redirects — match what Xcode **Signing & Capabilities** shows).
 
 ### C1. One-time: App Store Connect app record

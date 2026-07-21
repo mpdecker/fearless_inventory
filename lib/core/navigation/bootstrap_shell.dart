@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/app_lock_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/guest_mode_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../theme/app_colors.dart';
 import '../../features/auth/screens/app_lock_screen.dart';
@@ -12,10 +13,12 @@ import '../../features/auth/screens/welcome_auth_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 
-/// Single coordinator for onboarding → Firebase → email verify → PIN → lock → home.
+/// Single coordinator for onboarding → auth → email verify → PIN → lock → home.
 ///
-/// Avoids [Navigator.pushReplacement] between these phases so mandatory auth
-/// cannot be skipped.
+/// Avoids [Navigator.pushReplacement] between these phases so the flow stays a
+/// single rebuild-driven decision. A signed-in (verified) user and a user who
+/// chose local-only ("guest") mode both proceed to the on-device flow; only a
+/// signed-out, non-guest user sees the sign-in gate.
 class BootstrapShell extends ConsumerWidget {
   const BootstrapShell({super.key});
 
@@ -55,10 +58,14 @@ class BootstrapShell extends ConsumerWidget {
             ),
           ),
           data: (user) {
-            if (user == null) {
+            final isGuest = ref.watch(guestModeProvider);
+
+            // Signed-out and not in local-only mode → sign-in gate.
+            if (user == null && !isGuest) {
               return const WelcomeAuthScreen();
             }
-            if (!user.emailVerified) {
+            // A real (non-guest) account must verify its email first.
+            if (user != null && !user.emailVerified) {
               return const EmailVerificationScreen();
             }
 
