@@ -15,6 +15,23 @@ import 'package:integration_test/integration_test.dart';
 ///   --dart-define=RUN_LOCATION_IT=true
 /// ```
 ///
+/// On an iOS Simulator there is no interactive tapper, and `flutter test`
+/// reinstalls the app on each run (clearing its TCC grant), so the permission
+/// dialog blocks the test. Seed a location and keep re-granting through the
+/// reinstall window:
+///
+/// ```bash
+/// DEV=<simulator-udid>
+/// xcrun simctl location "$DEV" set 37.7749,-122.4194
+/// while :; do
+///   xcrun simctl privacy "$DEV" grant location-always \
+///     com.fearlessinventory.fearless_inventory 2>/dev/null || true
+///   sleep 1
+/// done &   # stop this loop once the test finishes
+/// flutter test integration_test/location_gps_test.dart \
+///   -d "$DEV" --dart-define=RUN_LOCATION_IT=true
+/// ```
+///
 /// CI and default `flutter test` skip this file unless that define is passed,
 /// so pipelines stay green without a GPS fixture.
 ///

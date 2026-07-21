@@ -309,7 +309,10 @@ class _BrowseTab extends HookConsumerWidget {
         Expanded(
           child: allAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => _InlineError(
+              rawError: '$e',
+              onRetry: () => ref.invalidate(allMeetingsProvider),
+            ),
             data: (all) {
               if (all.isEmpty) {
                 return _EmptyState(
@@ -484,7 +487,10 @@ class _SearchTab extends HookConsumerWidget {
           child: allAsync.when(
             loading: () =>
                 const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => _InlineError(
+              rawError: '$e',
+              onRetry: () => ref.invalidate(allMeetingsProvider),
+            ),
             data: (all) {
               if (all.isEmpty) {
                 return _EmptyState(
@@ -729,6 +735,20 @@ class _FilterSheet extends HookConsumerWidget {
     void update(MeetingFilter f) =>
         ref.read(meetingFilterProvider.notifier).state = f;
 
+    // Re-attempt whichever location source is active: re-geocode a typed
+    // query, or re-request GPS permission and refresh the position.
+    Future<void> retryLocation() async {
+      if (locationQuery.trim().isNotEmpty) {
+        ref.invalidate(geocodedLocationProvider);
+        return;
+      }
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      ref.invalidate(userLocationProvider);
+    }
+
     final cs = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
@@ -884,6 +904,16 @@ class _FilterSheet extends HookConsumerWidget {
                           ),
                         ),
                       ],
+                    ),
+                  ] else if (!activeAsync.isLoading && !isGeocoding) ...[
+                    // Location source settled with no result — tell the user
+                    // why and give them a way to retry, instead of silently
+                    // showing nothing.
+                    const SizedBox(height: 6),
+                    _LocationUnavailableHint(
+                      hasQuery: locationQuery.trim().isNotEmpty,
+                      query: locationQuery.trim(),
+                      onRetry: retryLocation,
                     ),
                   ],
 
@@ -1357,7 +1387,11 @@ class _MyMeetingsTab extends ConsumerWidget {
         const SizedBox(height: 8),
         bookmarkedAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          error: (e, _) => _InlineError(
+            rawError: '$e',
+            compact: true,
+            onRetry: () => ref.invalidate(bookmarkedMeetingsProvider),
+          ),
           data: (meetings) => meetings.isEmpty
               ? _emptySection(
                   'No saved meetings yet.',
@@ -1377,7 +1411,11 @@ class _MyMeetingsTab extends ConsumerWidget {
         const SizedBox(height: 8),
         attendanceAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          error: (e, _) => _InlineError(
+            rawError: '$e',
+            compact: true,
+            onRetry: () => ref.invalidate(attendanceLogsProvider),
+          ),
           data: (logs) => logs.isEmpty
               ? _emptySection(
                   'No attendance logged yet.',
@@ -2580,6 +2618,110 @@ String _friendlyError(String raw) {
   // Truncate long raw messages so they fit in the card.
   if (raw.length > 80) return '${raw.substring(0, 77)}…';
   return raw;
+}
+
+/// Friendly replacement for raw `Error: $e` dumps. Renders a human-readable
+/// message (via [_friendlyError]) with an optional retry action. Use
+/// [compact] inside a scrolling list section; the full form centers itself
+/// for an empty content panel.
+class _InlineError extends StatelessWidget {
+  final String rawError;
+  final VoidCallback? onRetry;
+  final bool compact;
+  const _InlineError({
+    required this.rawError,
+    this.onRetry,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.cloud_off_outlined,
+            size: compact ? 32 : 56, color: Colors.grey.shade400),
+        SizedBox(height: compact ? 8 : 16),
+        Text(
+          _friendlyError(rawError),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: compact ? 13 : 15,
+              height: 1.4),
+        ),
+        if (onRetry != null) ...[
+          SizedBox(height: compact ? 10 : 20),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Try again'),
+          ),
+        ],
+      ],
+    );
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(compact ? 16 : 32),
+        child: column,
+      ),
+    );
+  }
+}
+
+/// Shown in the filter sheet when the active location source resolved to
+/// nothing — a failed geocode or GPS that is off / denied / timed out — so
+/// the user sees a reason and a retry rather than a silently blank row.
+class _LocationUnavailableHint extends StatelessWidget {
+  final bool hasQuery;
+  final String query;
+  final VoidCallback onRetry;
+  const _LocationUnavailableHint({
+    required this.hasQuery,
+    required this.query,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final message = hasQuery
+        ? "Couldn't find “$query”. Check the spelling or try a nearby city."
+        : 'Location unavailable. Enable location access, or type a zip or '
+            'city above.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade100),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.location_off_outlined,
+              size: 15, color: Colors.orange.shade700),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                  fontSize: 12, color: Colors.orange.shade900, height: 1.35),
+            ),
+          ),
+          const SizedBox(width: 4),
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Retry', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
