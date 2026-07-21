@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +9,6 @@ import '../../core/services/seed_data_service.dart';
 import '../../core/widgets/app_dialogs.dart';
 import '../../core/services/sobriety_service.dart';
 import '../../data/repositories/sponsee_repository.dart';
-import '../../data/repositories/service_commitments_repository.dart';
 import '../../data/repositories/step12_repository.dart';
 import '../../data/services/export_service.dart';
 import 'step12_screen.dart' show AddSponseeSheet, AddStepCallSheet;
@@ -24,7 +22,6 @@ class SponseeDetailScreen extends ConsumerWidget {
   final int sponseeId;
   const SponseeDetailScreen({super.key, required this.sponseeId});
 
-  static final _dateFmt = DateFormat('MMM d, yyyy');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,7 +49,6 @@ class _SponseeDetailBody extends ConsumerWidget {
   final Sponsee sponsee;
   const _SponseeDetailBody({required this.sponsee});
 
-  static final _dateFmt = DateFormat('MMM d, yyyy');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -499,8 +495,6 @@ class _CheckInsSection extends ConsumerWidget {
   final Sponsee sponsee;
   const _CheckInsSection({required this.sponsee});
 
-  static final _dtFmt = DateFormat('EEE, MMM d · h:mm a');
-  static final _dateFmt = DateFormat('EEE, MMM d');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

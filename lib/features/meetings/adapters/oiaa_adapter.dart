@@ -107,7 +107,7 @@ class OiaaAdapter implements MeetingSourceAdapter {
           'OIAA feed: expected a JSON array, got ${body.runtimeType}.');
     }
 
-    return (body as List<dynamic>)
+    return body
         .whereType<Map<String, dynamic>>()
         .map(_parseMeeting)
         .whereType<MeetingDto>()

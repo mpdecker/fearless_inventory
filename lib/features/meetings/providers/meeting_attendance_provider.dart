@@ -1,5 +1,4 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../../core/database/database.dart';
 import '../../../data/repositories/meetings_repository.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────

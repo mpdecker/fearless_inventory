@@ -1600,7 +1600,6 @@ const _kPositionSuggestions = [
 class _CommitmentsView extends HookConsumerWidget {
   const _CommitmentsView();
 
-  static final _dateFmt = DateFormat('MMM d, yyyy');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1781,7 +1780,6 @@ class _CommitmentCard extends ConsumerWidget {
       {required this.commitment, this.dimmed = false});
 
   static final _dateFmt = DateFormat('MMM d, yyyy');
-  static final _timeFmt = DateFormat('h:mm a');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -3268,72 +3266,6 @@ class _SectionHeader extends StatelessWidget {
             fontSize: 12,
             color: color,
             letterSpacing: 0.5),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared stub helpers (used by _SponseeTab)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ComingSoonBadge extends StatelessWidget {
-  final Color color;
-  const _ComingSoonBadge({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
-      ),
-      child: Text(
-        'Coming soon',
-        style: TextStyle(
-            color: color, fontWeight: FontWeight.w600, fontSize: 14),
-      ),
-    );
-  }
-}
-
-class _FeaturePreviewList extends StatelessWidget {
-  final Color color;
-  final List<String> features;
-  const _FeaturePreviewList(
-      {required this.color, required this.features});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: features.map((f) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              children: [
-                Icon(Icons.check_circle_outline,
-                    size: 16, color: color),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(f,
-                      style: TextStyle(
-                          color: Colors.grey.shade700, fontSize: 14)),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
       ),
     );
   }

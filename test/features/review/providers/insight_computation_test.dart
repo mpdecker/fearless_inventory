@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart' show Icons;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fearless_inventory/core/database/database.dart';
@@ -200,17 +199,6 @@ void main() {
   // ── 2. Step 10 trend ─────────────────────────────────────────────────────
 
   group('insight 2 — Step 10 trend', () {
-    List<DailyReview> _reviewsWithDisturbers(int count, {bool recent = true}) {
-      final base = DateTime(2026, 4, 5);
-      return List.generate(count, (i) {
-        final offset = recent ? i : count + i;
-        return _review(
-          id: offset,
-          date: base.subtract(Duration(days: offset)),
-          resentful: true,
-        );
-      });
-    }
 
     test('not produced with fewer than 6 reviews', () {
       final cards = _insights(

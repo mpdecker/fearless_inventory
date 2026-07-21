@@ -27,7 +27,6 @@ import '../auth/screens/change_password_screen.dart';
 import '../auth/screens/pin_setup_screen.dart';
 import '../insights/providers/insights_extended_providers.dart';
 import '../meetings/providers/meeting_attendance_provider.dart';
-import '../onboarding/onboarding_screen.dart';
 import '../review/providers/insight_provider.dart';
 import '../review/providers/streak_provider.dart';
 import '../review/providers/trend_provider.dart';

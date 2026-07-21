@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fearless_inventory/core/database/database.dart';
@@ -26,12 +25,6 @@ DailyReview _review({
       reviewType:    'nightly',
       createdAt:     date,
     );
-
-/// Midnight for [date], optionally offset by [days].
-DateTime _day(DateTime base, {int offset = 0}) {
-  final d = base.subtract(Duration(days: offset));
-  return DateTime(d.year, d.month, d.day);
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -731,7 +731,7 @@ class MeetingSyncNotifier extends StateNotifier<SyncState> {
         DateTime.now().difference(lastSync).inDays < 7;
 
     final dtos = useDelta
-        ? await adapter.fetchUpdatedSince(lastSync!)
+        ? await adapter.fetchUpdatedSince(lastSync)
         : await adapter.fetchAll();
 
     final counts = await repo.upsertMeetings(adapter.sourceId, dtos);
