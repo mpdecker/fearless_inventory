@@ -30,7 +30,7 @@ After any change to `lib/core/database/database.dart`, run `build_runner build` 
 
 ### Data Layer: Drift ORM + Repository Pattern
 
-- **Schema**: `lib/core/database/database.dart` (currently v14 — bump version and add migration when changing tables)
+- **Schema**: `lib/core/database/database.dart` (currently v15 — bump version and add migration when changing tables)
 - **Generated code**: `lib/core/database/database.g.dart` (do not edit manually)
 - **Repositories**: `lib/data/repositories/` — one per domain (inventory, meetings, amends, etc.)
 - **Encryption**: SQLCipher via `KeyService`; sobriety date stored in Flutter Secure Storage
@@ -54,7 +54,7 @@ Key domain areas:
 Two separate auth layers exist:
 
 - **PIN / Biometric lock** — local, always-on. `PinService` stores the hashed PIN in Flutter Secure Storage; `BiometricService` wraps `local_auth`. State is managed by `AppLockNotifier` (`lib/core/providers/app_lock_provider.dart`). The app locks after 5 minutes in the background and re-requires the PIN/biometric.
-- **Firebase Auth** — optional cloud identity (email/password, Google, Apple). `FirebaseAuthService` (`lib/core/services/firebase_auth_service.dart`) and stream providers in `lib/core/providers/auth_provider.dart`. Firebase is used **only** for identity; all recovery content stays on-device. Firebase is currently commented out in `main.dart` — run `flutterfire configure` and uncomment to activate.
+- **Firebase Auth** — optional cloud identity (email/password, Google, Apple). `FirebaseAuthService` (`lib/core/services/firebase_auth_service.dart`) and stream providers in `lib/core/providers/auth_provider.dart`. Firebase is used **only** for identity; all recovery content stays on-device. Firebase is initialized in `main.dart` (guarded — an init failure is logged, not fatal). Sign-in is **not** mandatory: `WelcomeAuthScreen` offers "Continue without an account", which sets local-only ("guest") mode via `GuestModeService` / `guestModeProvider`; `BootstrapShell` then skips the sign-in gate. iOS Google Sign-In still needs the real `CLIENT_ID` (placeholder in `GoogleService-Info.plist` / `AppSecrets.xcconfig`).
 - **Auth screens** live in `lib/features/auth/screens/`: `AppLockScreen`, `PinSetupScreen`, `LoginScreen`, `RegisterScreen`, `ForgotPasswordScreen`, `AccountScreen`.
 
 ### App Initialization (`main.dart`)
@@ -69,6 +69,6 @@ Root routing decision (`_RootRouter`): Onboarding → PIN setup (first time) →
 
 ### Database Schema Notes
 
-The Drift schema is at version 9. Tables span all 12-step domains: Resentments, Fears, Harms, DailyReviews, Step5Completions, Defects, ShortcomingLogs, Amends, MeditationSessions, ServiceCommitments, TwelfthStepCalls, Sponsees, Meetings, AttendanceLogs, SyncMetas.
+The Drift schema is at version 15. Tables span all 12-step domains: Resentments, Fears, Harms, DailyReviews, Step5Completions, Defects, ShortcomingLogs, Amends, MeditationSessions, ServiceCommitments, TwelfthStepCalls, Sponsees, Meetings, AttendanceLogs, SyncMetas.
 
 When adding or modifying tables: bump `schemaVersion`, add a `MigrationStrategy` step in `database.dart`, then re-run `build_runner`.
