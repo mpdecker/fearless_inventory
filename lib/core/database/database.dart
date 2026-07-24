@@ -528,6 +528,42 @@ class LiteratureBookmarks extends Table {
       ];
 }
 
+/// A highlight (and optional note) anchored to a character range inside one
+/// literature section's extracted text. A pure highlight has [note] == null;
+/// adding text to [note] turns it into a note. Section identity is
+/// (bookKey, startPage, endPage) — the same key the reader uses to fetch text —
+/// so offsets stay valid as long as extraction is deterministic; [selectedText]
+/// is stored too as a human-readable anchor and re-location fallback.
+class LiteratureAnnotations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 'bigbook' | 'twelve_twelve' | …
+  TextColumn get bookKey => text()();
+
+  /// Section page range — matches the reader's section identity.
+  IntColumn get startPage => integer()();
+  IntColumn get endPage => integer()();
+
+  /// Outline title of the section, for display in annotation lists.
+  TextColumn get sectionTitle => text()();
+
+  /// Character offsets of the highlight within the section's extracted text.
+  IntColumn get selectionStart => integer()();
+  IntColumn get selectionEnd => integer()();
+
+  /// The highlighted excerpt (display + re-anchoring if offsets ever drift).
+  TextColumn get selectedText => text()();
+
+  /// Highlight colour name: 'yellow' | 'green' | 'blue' | 'pink'.
+  TextColumn get color => text().withDefault(const Constant('yellow'))();
+
+  /// Optional note attached to the highlight.
+  TextColumn get note => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 // ─────────────────────────────────────────────
 // DATABASE CLASS
 // ─────────────────────────────────────────────
@@ -562,6 +598,8 @@ class LiteratureBookmarks extends Table {
   SponsorCallLogs,
   // v14 — Rolodex contacts
   RolodexContacts,
+  // v16 — Literature highlights & notes
+  LiteratureAnnotations,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
@@ -573,7 +611,7 @@ class AppDatabase extends _$AppDatabase {
       : super(_openConnectionAt(databaseFile, encryptionKey));
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -649,6 +687,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 15) {
             await m.addColumn(dailyReviews, dailyReviews.reviewType);
           }
+          // v15 → v16: literature highlights & notes
+          if (from < 16) {
+            await m.createTable(literatureAnnotations);
+          }
         },
       );
 
@@ -675,6 +717,7 @@ class AppDatabase extends _$AppDatabase {
         await delete(sponsees).go();
         await delete(journalEntries).go();
         await delete(literatureBookmarks).go();
+        await delete(literatureAnnotations).go();
         await delete(sponsorCallLogs).go();
         await delete(rolodexContacts).go();
       });

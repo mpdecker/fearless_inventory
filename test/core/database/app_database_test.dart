@@ -37,6 +37,7 @@ void main() {
     'literature_bookmarks',
     'sponsor_call_logs',
     'rolodex_contacts',
+    'literature_annotations',
   };
 
   late Directory tempDir;
@@ -86,17 +87,17 @@ void main() {
       }
     });
 
-    test('schema version is 15 after fresh create', () async {
+    test('schema version is 16 after fresh create', () async {
       final db = await openDb();
       addTearDown(db.close);
       final row = await db
           .customSelect('PRAGMA user_version')
           .map((r) => r.read<int>('user_version'))
           .getSingle();
-      expect(row, 15);
+      expect(row, 16);
     });
 
-    test('all v14 user tables exist', () async {
+    test('all user tables exist', () async {
       final db = await openDb();
       addTearDown(db.close);
       final rows = await db
