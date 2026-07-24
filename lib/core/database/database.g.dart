@@ -12554,6 +12554,725 @@ class RolodexContactsCompanion extends UpdateCompanion<RolodexContact> {
   }
 }
 
+class $LiteratureAnnotationsTable extends LiteratureAnnotations
+    with TableInfo<$LiteratureAnnotationsTable, LiteratureAnnotation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LiteratureAnnotationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _bookKeyMeta = const VerificationMeta(
+    'bookKey',
+  );
+  @override
+  late final GeneratedColumn<String> bookKey = GeneratedColumn<String>(
+    'book_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startPageMeta = const VerificationMeta(
+    'startPage',
+  );
+  @override
+  late final GeneratedColumn<int> startPage = GeneratedColumn<int>(
+    'start_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endPageMeta = const VerificationMeta(
+    'endPage',
+  );
+  @override
+  late final GeneratedColumn<int> endPage = GeneratedColumn<int>(
+    'end_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectionTitleMeta = const VerificationMeta(
+    'sectionTitle',
+  );
+  @override
+  late final GeneratedColumn<String> sectionTitle = GeneratedColumn<String>(
+    'section_title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectionStartMeta = const VerificationMeta(
+    'selectionStart',
+  );
+  @override
+  late final GeneratedColumn<int> selectionStart = GeneratedColumn<int>(
+    'selection_start',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectionEndMeta = const VerificationMeta(
+    'selectionEnd',
+  );
+  @override
+  late final GeneratedColumn<int> selectionEnd = GeneratedColumn<int>(
+    'selection_end',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _selectedTextMeta = const VerificationMeta(
+    'selectedText',
+  );
+  @override
+  late final GeneratedColumn<String> selectedText = GeneratedColumn<String>(
+    'selected_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('yellow'),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookKey,
+    startPage,
+    endPage,
+    sectionTitle,
+    selectionStart,
+    selectionEnd,
+    selectedText,
+    color,
+    note,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'literature_annotations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LiteratureAnnotation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('book_key')) {
+      context.handle(
+        _bookKeyMeta,
+        bookKey.isAcceptableOrUnknown(data['book_key']!, _bookKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookKeyMeta);
+    }
+    if (data.containsKey('start_page')) {
+      context.handle(
+        _startPageMeta,
+        startPage.isAcceptableOrUnknown(data['start_page']!, _startPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startPageMeta);
+    }
+    if (data.containsKey('end_page')) {
+      context.handle(
+        _endPageMeta,
+        endPage.isAcceptableOrUnknown(data['end_page']!, _endPageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endPageMeta);
+    }
+    if (data.containsKey('section_title')) {
+      context.handle(
+        _sectionTitleMeta,
+        sectionTitle.isAcceptableOrUnknown(
+          data['section_title']!,
+          _sectionTitleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionTitleMeta);
+    }
+    if (data.containsKey('selection_start')) {
+      context.handle(
+        _selectionStartMeta,
+        selectionStart.isAcceptableOrUnknown(
+          data['selection_start']!,
+          _selectionStartMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_selectionStartMeta);
+    }
+    if (data.containsKey('selection_end')) {
+      context.handle(
+        _selectionEndMeta,
+        selectionEnd.isAcceptableOrUnknown(
+          data['selection_end']!,
+          _selectionEndMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_selectionEndMeta);
+    }
+    if (data.containsKey('selected_text')) {
+      context.handle(
+        _selectedTextMeta,
+        selectedText.isAcceptableOrUnknown(
+          data['selected_text']!,
+          _selectedTextMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_selectedTextMeta);
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LiteratureAnnotation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LiteratureAnnotation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      bookKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_key'],
+      )!,
+      startPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_page'],
+      )!,
+      endPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_page'],
+      )!,
+      sectionTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}section_title'],
+      )!,
+      selectionStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}selection_start'],
+      )!,
+      selectionEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}selection_end'],
+      )!,
+      selectedText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_text'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LiteratureAnnotationsTable createAlias(String alias) {
+    return $LiteratureAnnotationsTable(attachedDatabase, alias);
+  }
+}
+
+class LiteratureAnnotation extends DataClass
+    implements Insertable<LiteratureAnnotation> {
+  final int id;
+
+  /// 'bigbook' | 'twelve_twelve' | …
+  final String bookKey;
+
+  /// Section page range — matches the reader's section identity.
+  final int startPage;
+  final int endPage;
+
+  /// Outline title of the section, for display in annotation lists.
+  final String sectionTitle;
+
+  /// Character offsets of the highlight within the section's extracted text.
+  final int selectionStart;
+  final int selectionEnd;
+
+  /// The highlighted excerpt (display + re-anchoring if offsets ever drift).
+  final String selectedText;
+
+  /// Highlight colour name: 'yellow' | 'green' | 'blue' | 'pink'.
+  final String color;
+
+  /// Optional note attached to the highlight.
+  final String? note;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const LiteratureAnnotation({
+    required this.id,
+    required this.bookKey,
+    required this.startPage,
+    required this.endPage,
+    required this.sectionTitle,
+    required this.selectionStart,
+    required this.selectionEnd,
+    required this.selectedText,
+    required this.color,
+    this.note,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['book_key'] = Variable<String>(bookKey);
+    map['start_page'] = Variable<int>(startPage);
+    map['end_page'] = Variable<int>(endPage);
+    map['section_title'] = Variable<String>(sectionTitle);
+    map['selection_start'] = Variable<int>(selectionStart);
+    map['selection_end'] = Variable<int>(selectionEnd);
+    map['selected_text'] = Variable<String>(selectedText);
+    map['color'] = Variable<String>(color);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  LiteratureAnnotationsCompanion toCompanion(bool nullToAbsent) {
+    return LiteratureAnnotationsCompanion(
+      id: Value(id),
+      bookKey: Value(bookKey),
+      startPage: Value(startPage),
+      endPage: Value(endPage),
+      sectionTitle: Value(sectionTitle),
+      selectionStart: Value(selectionStart),
+      selectionEnd: Value(selectionEnd),
+      selectedText: Value(selectedText),
+      color: Value(color),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LiteratureAnnotation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LiteratureAnnotation(
+      id: serializer.fromJson<int>(json['id']),
+      bookKey: serializer.fromJson<String>(json['bookKey']),
+      startPage: serializer.fromJson<int>(json['startPage']),
+      endPage: serializer.fromJson<int>(json['endPage']),
+      sectionTitle: serializer.fromJson<String>(json['sectionTitle']),
+      selectionStart: serializer.fromJson<int>(json['selectionStart']),
+      selectionEnd: serializer.fromJson<int>(json['selectionEnd']),
+      selectedText: serializer.fromJson<String>(json['selectedText']),
+      color: serializer.fromJson<String>(json['color']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'bookKey': serializer.toJson<String>(bookKey),
+      'startPage': serializer.toJson<int>(startPage),
+      'endPage': serializer.toJson<int>(endPage),
+      'sectionTitle': serializer.toJson<String>(sectionTitle),
+      'selectionStart': serializer.toJson<int>(selectionStart),
+      'selectionEnd': serializer.toJson<int>(selectionEnd),
+      'selectedText': serializer.toJson<String>(selectedText),
+      'color': serializer.toJson<String>(color),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LiteratureAnnotation copyWith({
+    int? id,
+    String? bookKey,
+    int? startPage,
+    int? endPage,
+    String? sectionTitle,
+    int? selectionStart,
+    int? selectionEnd,
+    String? selectedText,
+    String? color,
+    Value<String?> note = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => LiteratureAnnotation(
+    id: id ?? this.id,
+    bookKey: bookKey ?? this.bookKey,
+    startPage: startPage ?? this.startPage,
+    endPage: endPage ?? this.endPage,
+    sectionTitle: sectionTitle ?? this.sectionTitle,
+    selectionStart: selectionStart ?? this.selectionStart,
+    selectionEnd: selectionEnd ?? this.selectionEnd,
+    selectedText: selectedText ?? this.selectedText,
+    color: color ?? this.color,
+    note: note.present ? note.value : this.note,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  LiteratureAnnotation copyWithCompanion(LiteratureAnnotationsCompanion data) {
+    return LiteratureAnnotation(
+      id: data.id.present ? data.id.value : this.id,
+      bookKey: data.bookKey.present ? data.bookKey.value : this.bookKey,
+      startPage: data.startPage.present ? data.startPage.value : this.startPage,
+      endPage: data.endPage.present ? data.endPage.value : this.endPage,
+      sectionTitle: data.sectionTitle.present
+          ? data.sectionTitle.value
+          : this.sectionTitle,
+      selectionStart: data.selectionStart.present
+          ? data.selectionStart.value
+          : this.selectionStart,
+      selectionEnd: data.selectionEnd.present
+          ? data.selectionEnd.value
+          : this.selectionEnd,
+      selectedText: data.selectedText.present
+          ? data.selectedText.value
+          : this.selectedText,
+      color: data.color.present ? data.color.value : this.color,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LiteratureAnnotation(')
+          ..write('id: $id, ')
+          ..write('bookKey: $bookKey, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('sectionTitle: $sectionTitle, ')
+          ..write('selectionStart: $selectionStart, ')
+          ..write('selectionEnd: $selectionEnd, ')
+          ..write('selectedText: $selectedText, ')
+          ..write('color: $color, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookKey,
+    startPage,
+    endPage,
+    sectionTitle,
+    selectionStart,
+    selectionEnd,
+    selectedText,
+    color,
+    note,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LiteratureAnnotation &&
+          other.id == this.id &&
+          other.bookKey == this.bookKey &&
+          other.startPage == this.startPage &&
+          other.endPage == this.endPage &&
+          other.sectionTitle == this.sectionTitle &&
+          other.selectionStart == this.selectionStart &&
+          other.selectionEnd == this.selectionEnd &&
+          other.selectedText == this.selectedText &&
+          other.color == this.color &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LiteratureAnnotationsCompanion
+    extends UpdateCompanion<LiteratureAnnotation> {
+  final Value<int> id;
+  final Value<String> bookKey;
+  final Value<int> startPage;
+  final Value<int> endPage;
+  final Value<String> sectionTitle;
+  final Value<int> selectionStart;
+  final Value<int> selectionEnd;
+  final Value<String> selectedText;
+  final Value<String> color;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const LiteratureAnnotationsCompanion({
+    this.id = const Value.absent(),
+    this.bookKey = const Value.absent(),
+    this.startPage = const Value.absent(),
+    this.endPage = const Value.absent(),
+    this.sectionTitle = const Value.absent(),
+    this.selectionStart = const Value.absent(),
+    this.selectionEnd = const Value.absent(),
+    this.selectedText = const Value.absent(),
+    this.color = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  LiteratureAnnotationsCompanion.insert({
+    this.id = const Value.absent(),
+    required String bookKey,
+    required int startPage,
+    required int endPage,
+    required String sectionTitle,
+    required int selectionStart,
+    required int selectionEnd,
+    required String selectedText,
+    this.color = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : bookKey = Value(bookKey),
+       startPage = Value(startPage),
+       endPage = Value(endPage),
+       sectionTitle = Value(sectionTitle),
+       selectionStart = Value(selectionStart),
+       selectionEnd = Value(selectionEnd),
+       selectedText = Value(selectedText);
+  static Insertable<LiteratureAnnotation> custom({
+    Expression<int>? id,
+    Expression<String>? bookKey,
+    Expression<int>? startPage,
+    Expression<int>? endPage,
+    Expression<String>? sectionTitle,
+    Expression<int>? selectionStart,
+    Expression<int>? selectionEnd,
+    Expression<String>? selectedText,
+    Expression<String>? color,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookKey != null) 'book_key': bookKey,
+      if (startPage != null) 'start_page': startPage,
+      if (endPage != null) 'end_page': endPage,
+      if (sectionTitle != null) 'section_title': sectionTitle,
+      if (selectionStart != null) 'selection_start': selectionStart,
+      if (selectionEnd != null) 'selection_end': selectionEnd,
+      if (selectedText != null) 'selected_text': selectedText,
+      if (color != null) 'color': color,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  LiteratureAnnotationsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? bookKey,
+    Value<int>? startPage,
+    Value<int>? endPage,
+    Value<String>? sectionTitle,
+    Value<int>? selectionStart,
+    Value<int>? selectionEnd,
+    Value<String>? selectedText,
+    Value<String>? color,
+    Value<String?>? note,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return LiteratureAnnotationsCompanion(
+      id: id ?? this.id,
+      bookKey: bookKey ?? this.bookKey,
+      startPage: startPage ?? this.startPage,
+      endPage: endPage ?? this.endPage,
+      sectionTitle: sectionTitle ?? this.sectionTitle,
+      selectionStart: selectionStart ?? this.selectionStart,
+      selectionEnd: selectionEnd ?? this.selectionEnd,
+      selectedText: selectedText ?? this.selectedText,
+      color: color ?? this.color,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (bookKey.present) {
+      map['book_key'] = Variable<String>(bookKey.value);
+    }
+    if (startPage.present) {
+      map['start_page'] = Variable<int>(startPage.value);
+    }
+    if (endPage.present) {
+      map['end_page'] = Variable<int>(endPage.value);
+    }
+    if (sectionTitle.present) {
+      map['section_title'] = Variable<String>(sectionTitle.value);
+    }
+    if (selectionStart.present) {
+      map['selection_start'] = Variable<int>(selectionStart.value);
+    }
+    if (selectionEnd.present) {
+      map['selection_end'] = Variable<int>(selectionEnd.value);
+    }
+    if (selectedText.present) {
+      map['selected_text'] = Variable<String>(selectedText.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LiteratureAnnotationsCompanion(')
+          ..write('id: $id, ')
+          ..write('bookKey: $bookKey, ')
+          ..write('startPage: $startPage, ')
+          ..write('endPage: $endPage, ')
+          ..write('sectionTitle: $sectionTitle, ')
+          ..write('selectionStart: $selectionStart, ')
+          ..write('selectionEnd: $selectionEnd, ')
+          ..write('selectedText: $selectedText, ')
+          ..write('color: $color, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12597,6 +13316,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RolodexContactsTable rolodexContacts = $RolodexContactsTable(
     this,
   );
+  late final $LiteratureAnnotationsTable literatureAnnotations =
+      $LiteratureAnnotationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12624,6 +13345,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     literatureBookmarks,
     sponsorCallLogs,
     rolodexContacts,
+    literatureAnnotations,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -20816,6 +21538,360 @@ typedef $$RolodexContactsTableProcessedTableManager =
       RolodexContact,
       PrefetchHooks Function({bool meetingId, bool sponseeId})
     >;
+typedef $$LiteratureAnnotationsTableCreateCompanionBuilder =
+    LiteratureAnnotationsCompanion Function({
+      Value<int> id,
+      required String bookKey,
+      required int startPage,
+      required int endPage,
+      required String sectionTitle,
+      required int selectionStart,
+      required int selectionEnd,
+      required String selectedText,
+      Value<String> color,
+      Value<String?> note,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$LiteratureAnnotationsTableUpdateCompanionBuilder =
+    LiteratureAnnotationsCompanion Function({
+      Value<int> id,
+      Value<String> bookKey,
+      Value<int> startPage,
+      Value<int> endPage,
+      Value<String> sectionTitle,
+      Value<int> selectionStart,
+      Value<int> selectionEnd,
+      Value<String> selectedText,
+      Value<String> color,
+      Value<String?> note,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$LiteratureAnnotationsTableFilterComposer
+    extends Composer<_$AppDatabase, $LiteratureAnnotationsTable> {
+  $$LiteratureAnnotationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookKey => $composableBuilder(
+    column: $table.bookKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sectionTitle => $composableBuilder(
+    column: $table.sectionTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get selectionStart => $composableBuilder(
+    column: $table.selectionStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get selectionEnd => $composableBuilder(
+    column: $table.selectionEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LiteratureAnnotationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LiteratureAnnotationsTable> {
+  $$LiteratureAnnotationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookKey => $composableBuilder(
+    column: $table.bookKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startPage => $composableBuilder(
+    column: $table.startPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endPage => $composableBuilder(
+    column: $table.endPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sectionTitle => $composableBuilder(
+    column: $table.sectionTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get selectionStart => $composableBuilder(
+    column: $table.selectionStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get selectionEnd => $composableBuilder(
+    column: $table.selectionEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LiteratureAnnotationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LiteratureAnnotationsTable> {
+  $$LiteratureAnnotationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get bookKey =>
+      $composableBuilder(column: $table.bookKey, builder: (column) => column);
+
+  GeneratedColumn<int> get startPage =>
+      $composableBuilder(column: $table.startPage, builder: (column) => column);
+
+  GeneratedColumn<int> get endPage =>
+      $composableBuilder(column: $table.endPage, builder: (column) => column);
+
+  GeneratedColumn<String> get sectionTitle => $composableBuilder(
+    column: $table.sectionTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get selectionStart => $composableBuilder(
+    column: $table.selectionStart,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get selectionEnd => $composableBuilder(
+    column: $table.selectionEnd,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectedText => $composableBuilder(
+    column: $table.selectedText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$LiteratureAnnotationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LiteratureAnnotationsTable,
+          LiteratureAnnotation,
+          $$LiteratureAnnotationsTableFilterComposer,
+          $$LiteratureAnnotationsTableOrderingComposer,
+          $$LiteratureAnnotationsTableAnnotationComposer,
+          $$LiteratureAnnotationsTableCreateCompanionBuilder,
+          $$LiteratureAnnotationsTableUpdateCompanionBuilder,
+          (
+            LiteratureAnnotation,
+            BaseReferences<
+              _$AppDatabase,
+              $LiteratureAnnotationsTable,
+              LiteratureAnnotation
+            >,
+          ),
+          LiteratureAnnotation,
+          PrefetchHooks Function()
+        > {
+  $$LiteratureAnnotationsTableTableManager(
+    _$AppDatabase db,
+    $LiteratureAnnotationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LiteratureAnnotationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LiteratureAnnotationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LiteratureAnnotationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> bookKey = const Value.absent(),
+                Value<int> startPage = const Value.absent(),
+                Value<int> endPage = const Value.absent(),
+                Value<String> sectionTitle = const Value.absent(),
+                Value<int> selectionStart = const Value.absent(),
+                Value<int> selectionEnd = const Value.absent(),
+                Value<String> selectedText = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => LiteratureAnnotationsCompanion(
+                id: id,
+                bookKey: bookKey,
+                startPage: startPage,
+                endPage: endPage,
+                sectionTitle: sectionTitle,
+                selectionStart: selectionStart,
+                selectionEnd: selectionEnd,
+                selectedText: selectedText,
+                color: color,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String bookKey,
+                required int startPage,
+                required int endPage,
+                required String sectionTitle,
+                required int selectionStart,
+                required int selectionEnd,
+                required String selectedText,
+                Value<String> color = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => LiteratureAnnotationsCompanion.insert(
+                id: id,
+                bookKey: bookKey,
+                startPage: startPage,
+                endPage: endPage,
+                sectionTitle: sectionTitle,
+                selectionStart: selectionStart,
+                selectionEnd: selectionEnd,
+                selectedText: selectedText,
+                color: color,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LiteratureAnnotationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LiteratureAnnotationsTable,
+      LiteratureAnnotation,
+      $$LiteratureAnnotationsTableFilterComposer,
+      $$LiteratureAnnotationsTableOrderingComposer,
+      $$LiteratureAnnotationsTableAnnotationComposer,
+      $$LiteratureAnnotationsTableCreateCompanionBuilder,
+      $$LiteratureAnnotationsTableUpdateCompanionBuilder,
+      (
+        LiteratureAnnotation,
+        BaseReferences<
+          _$AppDatabase,
+          $LiteratureAnnotationsTable,
+          LiteratureAnnotation
+        >,
+      ),
+      LiteratureAnnotation,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -20864,4 +21940,6 @@ class $AppDatabaseManager {
       $$SponsorCallLogsTableTableManager(_db, _db.sponsorCallLogs);
   $$RolodexContactsTableTableManager get rolodexContacts =>
       $$RolodexContactsTableTableManager(_db, _db.rolodexContacts);
+  $$LiteratureAnnotationsTableTableManager get literatureAnnotations =>
+      $$LiteratureAnnotationsTableTableManager(_db, _db.literatureAnnotations);
 }

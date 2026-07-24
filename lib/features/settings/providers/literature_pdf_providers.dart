@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../core/database/database.dart';
 import '../../../core/services/literature_pdf_catalog_service.dart';
+import '../../../data/repositories/literature_annotation_repository.dart';
 
 final literaturePdfCatalogServiceProvider =
     Provider<LiteraturePdfCatalogService>((ref) {
@@ -48,3 +50,16 @@ final literatureSectionTextProvider =
             endPage: req.endPage,
           );
     });
+
+/// Highlights & notes for one section, kept live so the reader repaints as
+/// annotations are added, edited, or removed.
+final literatureSectionAnnotationsProvider =
+    StreamProvider.family<List<LiteratureAnnotation>, SectionTextRequest>(
+  (ref, req) {
+    return ref.watch(literatureAnnotationRepositoryProvider).watchForSection(
+          bookKey: req.bookKey,
+          startPage: req.startPage,
+          endPage: req.endPage,
+        );
+  },
+);
