@@ -95,6 +95,60 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
   }
 
+  Future<AppDatabase> emptyDb(WidgetTester tester) async {
+    late AppDatabase db;
+    await tester.runAsync(() async {
+      db = AppDatabase.testing(NativeDatabase.memory());
+    });
+    return db;
+  }
+
+  testWidgets(
+      'selecting text and tapping Highlight creates a correctly-anchored annotation',
+      (tester) async {
+    final db = await emptyDb(tester);
+    addTearDown(db.close);
+    final repo = LiteratureAnnotationRepository(db);
+
+    await tester.pumpWidget(_harness(db));
+    await settle(tester);
+
+    // Select "Rarely have we seen" (offsets 0..19 of the sample text).
+    final editable =
+        tester.state<EditableTextState>(find.byType(EditableText));
+    editable.userUpdateTextEditingValue(
+      editable.textEditingValue.copyWith(
+        selection: const TextSelection(baseOffset: 0, extentOffset: 19),
+      ),
+      SelectionChangedCause.tap,
+    );
+    await tester.pump();
+
+    // Open the selection toolbar (our custom contextMenuBuilder) and Highlight.
+    expect(editable.showToolbar(), isTrue);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Highlight'), findsOneWidget);
+    await tester.tap(find.text('Highlight'));
+
+    // Let the async DB write settle, then read it back.
+    List<LiteratureAnnotation> rows = const [];
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      rows = await repo
+          .watchForSection(bookKey: _bookKey, startPage: 58, endPage: 60)
+          .first;
+    });
+
+    expect(rows, hasLength(1));
+    expect(rows.single.selectionStart, 0);
+    expect(rows.single.selectionEnd, 19);
+    expect(rows.single.selectedText, 'Rarely have we seen');
+
+    await teardownTree(tester);
+  });
+
   testWidgets('renders section text and a badge with the annotation count',
       (tester) async {
     final db = await seededDb(tester);

@@ -7,6 +7,7 @@ import '../../../core/services/literature_pdf_catalog_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/literature_annotation_repository.dart';
 import '../providers/literature_pdf_providers.dart';
+import 'literature_annotation_spans.dart';
 
 /// Named highlight colours. Stored by [name]; rendered as a translucent wash so
 /// the underlying text stays readable in the dark theme.
@@ -76,18 +77,18 @@ class _LiteratureSectionReaderScreenState
     required bool withNote,
   }) async {
     if (selection.isCollapsed) return;
-    final start = selection.start.clamp(0, fullText.length);
-    final end = selection.end.clamp(0, fullText.length);
-    if (end <= start) return;
-    final excerpt = fullText.substring(start, end);
+    final range =
+        resolveSelectionRange(selection.start, selection.end, fullText.length);
+    if (range == null) return;
+    final excerpt = fullText.substring(range.start, range.end);
 
     final id = await _repo.add(
       bookKey: widget.bookKey,
       startPage: widget.section.startPage,
       endPage: widget.section.endPage,
       sectionTitle: widget.section.title,
-      selectionStart: start,
-      selectionEnd: end,
+      selectionStart: range.start,
+      selectionEnd: range.end,
       selectedText: excerpt,
       color: _defaultHighlightColor,
     );
@@ -160,46 +161,23 @@ class _LiteratureSectionReaderScreenState
     _disposeRecognizers();
     if (annotations.isEmpty) return TextSpan(text: text, style: baseStyle);
 
-    // Collect boundary offsets, clamped to the text length.
-    final len = text.length;
-    final bounds = <int>{0, len};
-    for (final a in annotations) {
-      bounds.add(a.selectionStart.clamp(0, len));
-      bounds.add(a.selectionEnd.clamp(0, len));
-    }
-    final sorted = bounds.toList()..sort();
-
+    final runs = computeAnnotationRuns(text.length, annotations);
     final spans = <InlineSpan>[];
-    for (var i = 0; i < sorted.length - 1; i++) {
-      final runStart = sorted[i];
-      final runEnd = sorted[i + 1];
-      if (runEnd <= runStart) continue;
-
-      // Earliest annotation covering this run, if any.
-      LiteratureAnnotation? covering;
-      for (final a in annotations) {
-        final s = a.selectionStart.clamp(0, len);
-        final e = a.selectionEnd.clamp(0, len);
-        if (s <= runStart && e >= runEnd) {
-          covering = a;
-          break;
-        }
-      }
-
+    for (final run in runs) {
+      final covering = run.annotation;
       if (covering == null) {
-        spans.add(TextSpan(text: text.substring(runStart, runEnd)));
+        spans.add(TextSpan(text: text.substring(run.start, run.end)));
         continue;
       }
 
       final hasNote = (covering.note ?? '').trim().isNotEmpty;
-      TapGestureRecognizer? recognizer;
       final captured = covering;
-      recognizer = TapGestureRecognizer()
+      final recognizer = TapGestureRecognizer()
         ..onTap = () => _openAnnotationSheet(captured);
       _recognizers.add(recognizer);
 
       spans.add(TextSpan(
-        text: text.substring(runStart, runEnd),
+        text: text.substring(run.start, run.end),
         recognizer: recognizer,
         style: TextStyle(
           backgroundColor: _washFor(covering.color),
