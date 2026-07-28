@@ -1,0 +1,59 @@
+name: Publish privacy policy
+
+# Publishes ONLY the generated privacy policy page to GitHub Pages.
+#
+# The page is rendered from docs/privacy-policy.md at deploy time, so the
+# hosted copy can never drift from the source in the repo. Nothing else is
+# uploaded — in particular docs/ is not served, since it also contains
+# internal release planning documents.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/privacy-policy.md'
+      - 'tool/render_privacy_policy.py'
+      - '.github/workflows/pages.yml'
+  # Allows publishing on demand from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render policy to static HTML
+        run: python3 tool/render_privacy_policy.py docs/privacy-policy.md _site
+
+      - name: Fail if a maintainer note leaked into the published page
+        run: |
+          if grep -qiE 'MAINTAINER NOTE|privacy_policy_content\.dart|kPrivacyPolicyUrl' _site/privacy-policy.html; then
+            echo "::error::Internal maintainer note leaked into the public page."
+            exit 1
+          fi
+          echo "No maintainer notes in published output."
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
