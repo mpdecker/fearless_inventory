@@ -83,31 +83,33 @@ class NotificationService {
     await requestPermissions();
   }
 
-  /// Android: post notifications (13+) and exact alarms. iOS: permissions are
-  /// requested during [initialize] via [DarwinInitializationSettings]; there is
-  /// no separate exact-alarm permission.
+  /// Android: post notifications (13+). iOS: permissions are requested during
+  /// [initialize] via [DarwinInitializationSettings].
+  ///
+  /// No exact-alarm permission is requested: reminders are scheduled inexactly
+  /// (see [_androidScheduleMode]), so `SCHEDULE_EXACT_ALARM` is not needed.
   Future<void> requestPermissions() async {
     if (!Platform.isAndroid) return;
 
     await Permission.notification.request();
-
-    if (await Permission.scheduleExactAlarm.isDenied) {
-      await Permission.scheduleExactAlarm.request();
-    }
   }
+
+  /// Reminders are scheduled **inexactly** on purpose.
+  ///
+  /// `SCHEDULE_EXACT_ALARM` is a Play "sensitive" permission that is not
+  /// granted by default on Android 13+ — the user has to enable it in system
+  /// settings. Gating reminders on it meant that anyone who never granted it
+  /// silently received no reminders at all, which is a worse failure for a
+  /// recovery app than a reminder arriving a few minutes late. The OS may
+  /// batch these with other wakeups; `allowWhileIdle` still lets them fire in
+  /// Doze.
+  static const AndroidScheduleMode _androidScheduleMode =
+      AndroidScheduleMode.inexactAllowWhileIdle;
 
   Future<void> scheduleDailyReviewReminder({
     required int hour,
     required int minute,
   }) async {
-    if (Platform.isAndroid) {
-      final status = await Permission.scheduleExactAlarm.status;
-      if (status.isDenied) {
-        debugPrint('Cannot schedule daily review: exact alarm permission denied.');
-        return;
-      }
-    }
-
     try {
       await _notifications.zonedSchedule(
         idDailyReview,
@@ -128,7 +130,7 @@ class NotificationService {
           ),
         ),
         payload: _payloadDailyReview,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: _androidScheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -142,15 +144,6 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    if (Platform.isAndroid) {
-      final status = await Permission.scheduleExactAlarm.status;
-      if (status.isDenied) {
-        debugPrint(
-            'Cannot schedule bedtime meditation: exact alarm permission denied.');
-        return;
-      }
-    }
-
     try {
       await _notifications.zonedSchedule(
         idBedtimeMeditation,
@@ -171,7 +164,7 @@ class NotificationService {
           ),
         ),
         payload: _payloadBedtime,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: _androidScheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -192,15 +185,6 @@ class NotificationService {
     required String frequency,
     int weekday = 1,
   }) async {
-    if (Platform.isAndroid) {
-      final status = await Permission.scheduleExactAlarm.status;
-      if (status.isDenied) {
-        debugPrint(
-            'Cannot schedule sponsor call reminder: exact alarm permission denied.');
-        return;
-      }
-    }
-
     final isWeekly = frequency == 'weekly';
     final scheduled = isWeekly
         ? _nextInstanceOfWeekdayAndTime(weekday, hour, minute)
@@ -229,7 +213,7 @@ class NotificationService {
           ),
         ),
         payload: _payloadSponsorCall,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: _androidScheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: components,

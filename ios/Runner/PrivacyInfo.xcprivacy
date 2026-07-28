@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Privacy manifest for the Runner target.
+
+	  Scope: this app's own code plus embedded binaries that ship no manifest of
+	  their own. Frameworks that DO carry one (Flutter, Firebase*, GoogleSignIn,
+	  geolocator, flutter_secure_storage, local_auth, url_launcher,
+	  flutter_local_notifications, permission_handler) declare their own use and
+	  are deliberately not duplicated here.
+
+	  The required-reason entries below exist because sqlite3mc.framework — the
+	  encrypted SQLite build backing the on-device database — ships without a
+	  manifest and links stat/lstat/fstat (file metadata) and statfs/fstatfs
+	  (disk space).
+	-->
+
+	<!-- No tracking, no tracking domains, no ad/analytics SDKs in this app. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!--
+		  Email address, only when the user opts into creating an account
+		  (sign-in is optional — local-only "guest" mode collects nothing).
+		  Used solely to authenticate; never linked to recovery content, which
+		  stays encrypted on device.
+
+		  Location and contacts are intentionally NOT listed: coordinates are
+		  used on-device for distance math and contacts are imported into the
+		  local encrypted database. Neither leaves the device, so neither is
+		  "collected" under Apple's definition.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- Metadata of files inside the app container (SQLite journal
+				     and database files). -->
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- Checked before writing to files inside the app container. -->
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
