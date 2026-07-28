@@ -139,4 +139,31 @@ Phase 8 anytime (parallel)
 | ---------- | ------------------------------------------- |
 | 2026-04-12 | Initial plan from pre-submission gap review |
 
+## Status update (2026-07-27)
 
+Closed in-repo:
+
+- **Exact alarms (5.2)** — `SCHEDULE_EXACT_ALARM` removed from the manifest and
+  all reminders switched to `inexactAllowWhileIdle`. No Play declaration is
+  needed. This also fixed a real bug: schedulers returned early when the
+  permission was denied, so on Android 13+ (where it is not granted by default)
+  users could silently receive no reminders at all.
+- **Privacy policy (5.4 / 6.1)** — policy written and rendered in-app at
+  Settings → Privacy → Privacy Policy, from
+  `lib/features/settings/privacy_policy_content.dart`. A matching copy for
+  hosting is at `docs/privacy-policy.md`; a test fails if the two drift apart.
+- **Privacy manifest (7.1)** — `ios/Runner/PrivacyInfo.xcprivacy` added and
+  wired into the Runner target. It declares FileTimestamp (C617.1) and
+  DiskSpace (E174.1), required because `sqlite3mc.framework` ships no manifest
+  of its own and links `stat`/`lstat`/`fstat` and `statfs`/`fstatfs`. Verified
+  present at the bundle root of a release build.
+
+Still open (needs console access or hosting, not code):
+
+- Host `docs/privacy-policy.md` at an HTTPS URL, put it on both store listings,
+  and set `kPrivacyPolicyUrl` so the in-app screen also offers the online copy.
+- Google Sign-In iOS `CLIENT_ID` placeholder (1.3) and Android `oauth_client`
+  SHA fingerprints (2.1).
+- Google Play Data Safety form (5.1) — declare account email; location and
+  contacts are used on-device only and are not collected.
+- AA literature licensing.

@@ -32,6 +32,7 @@ import '../review/providers/streak_provider.dart';
 import '../review/providers/trend_provider.dart';
 import '../sponsor_call/sponsor_call_screen.dart';
 import 'screens/literature_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -166,6 +167,18 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(),
           _buildSectionHeader('Privacy'),
+
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined,
+                color: Colors.lightBlueAccent),
+            title: const Text('Privacy Policy'),
+            subtitle: const Text(
+                'What stays on this device, and what does not'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+            onTap: () => Navigator.of(context).push(
+              adaptivePageRoute((_) => const PrivacyPolicyScreen()),
+            ),
+          ),
 
           ListTile(
             leading:
