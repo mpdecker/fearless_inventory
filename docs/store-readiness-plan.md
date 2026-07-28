@@ -160,8 +160,12 @@ Closed in-repo:
 
 Still open (needs console access or hosting, not code):
 
-- Host `docs/privacy-policy.md` at an HTTPS URL, put it on both store listings,
-  and set `kPrivacyPolicyUrl` so the in-app screen also offers the online copy.
+- ~~Host the privacy policy and set `kPrivacyPolicyUrl`.~~ **Done.** Published
+  via GitHub Pages at https://mpdecker.github.io/fearless_inventory/privacy-policy.html
+  (rendered from `docs/privacy-policy.md` by `.github/workflows/pages.yml`).
+  Verified live: policy returns 200, internal docs under `docs/` return 404.
+  **Remaining manual step:** paste that URL into the App Store Connect and Play
+  Console listings.
 - Google Sign-In iOS `CLIENT_ID` placeholder (1.3) and Android `oauth_client`
   SHA fingerprints (2.1).
 - Google Play Data Safety form (5.1) — declare account email; location and
