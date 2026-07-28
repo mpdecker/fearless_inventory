@@ -35,6 +35,17 @@ void main() {
       expect(all, contains('without an account'));
     });
 
+    test('hosted URL, when set, is a well-formed HTTPS address', () {
+      if (kPrivacyPolicyUrl.isEmpty) return; // not yet hosted — allowed
+      final uri = Uri.tryParse(kPrivacyPolicyUrl);
+      expect(uri, isNotNull, reason: 'must parse as a URI');
+      expect(uri!.scheme, 'https',
+          reason: 'store listings and the in-app link require HTTPS');
+      expect(uri.host, isNotEmpty);
+      expect(uri.hasEmptyPath, isFalse,
+          reason: 'should point at the policy page, not just a host');
+    });
+
     test('hosted markdown copy exists and tracks the same last-updated date',
         () {
       final file = File('docs/privacy-policy.md');
@@ -71,7 +82,7 @@ void main() {
     }
   });
 
-  testWidgets('no external-link action while no hosted URL is configured',
+  testWidgets('external-link action appears only when a hosted URL is set',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(home: PrivacyPolicyScreen()));
     await tester.pump();

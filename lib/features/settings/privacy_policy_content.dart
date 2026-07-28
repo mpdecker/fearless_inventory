@@ -12,9 +12,12 @@ const String kPrivacyPolicyLastUpdated = 'July 27, 2026';
 
 /// Publicly hosted copy, used on the store listings.
 ///
-/// Empty until the policy is hosted. The Settings entry does not depend on
-/// this — it opens the bundled copy — so leaving it empty ships nothing broken.
-const String kPrivacyPolicyUrl = '';
+/// Published by `.github/workflows/pages.yml` from `docs/privacy-policy.md`,
+/// so it always matches the text below. The Settings entry does not depend on
+/// this — it renders the bundled copy — but when set, the policy screen also
+/// offers to open the online version.
+const String kPrivacyPolicyUrl =
+    'https://mpdecker.github.io/fearless_inventory/privacy-policy.html';
 
 class PolicySection {
   final String heading;
