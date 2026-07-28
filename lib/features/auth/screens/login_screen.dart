@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/firebase_auth_service.dart';
+import '../../../core/config/auth_provider_config.dart';
 import '../widgets/social_auth_buttons.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
@@ -252,16 +253,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const OrDivider(),
                 const SizedBox(height: 20),
 
-                SignInWithAppleButton(
-                  onPressed: _isLoading ? null : _signInWithApple,
-                  isLoading: false,
-                ),
-                const SizedBox(height: 12),
+                if (kAppleSignInEnabled) ...[
+                  SignInWithAppleButton(
+                    onPressed: _isLoading ? null : _signInWithApple,
+                    isLoading: false,
+                  ),
+                  const SizedBox(height: 12),
+                ],
 
-                SignInWithGoogleButton(
-                  onPressed: _isLoading ? null : _signInWithGoogle,
-                  isLoading: false,
-                ),
+                // Hidden until the Google OAuth clients exist; see
+                // [kGoogleSignInEnabled].
+                if (kGoogleSignInEnabled) ...[
+                  SignInWithGoogleButton(
+                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    isLoading: false,
+                  ),
+                ],
                 const SizedBox(height: 36),
 
                 // ── Register link ─────────────────────────────────────────

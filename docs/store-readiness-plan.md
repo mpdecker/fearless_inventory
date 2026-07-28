@@ -167,7 +167,11 @@ Still open (needs console access or hosting, not code):
   **Remaining manual step:** paste that URL into the App Store Connect and Play
   Console listings.
 - Google Sign-In iOS `CLIENT_ID` placeholder (1.3) and Android `oauth_client`
-  SHA fingerprints (2.1).
+  SHA fingerprints (2.1). **The button is now hidden** rather than shipped
+  broken — `kGoogleSignInEnabled` in
+  `lib/core/config/auth_provider_config.dart` is `false`, and a test refuses to
+  let it be `true` while the placeholders remain. Flip it once the OAuth
+  clients exist. Apple Sign In and email/password are unaffected.
 - Google Play Data Safety form (5.1) — declare account email; location and
   contacts are used on-device only and are not collected.
 - AA literature licensing.

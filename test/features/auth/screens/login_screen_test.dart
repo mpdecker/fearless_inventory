@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:fearless_inventory/core/config/auth_provider_config.dart';
 import 'package:fearless_inventory/core/providers/auth_provider.dart';
 import 'package:fearless_inventory/core/services/firebase_auth_service.dart';
 import 'package:fearless_inventory/features/auth/screens/login_screen.dart';
@@ -57,12 +58,21 @@ void main() {
 
     testWidgets('renders Sign in with Apple button', (tester) async {
       await tester.pumpWidget(_buildLoginScreen(mockAuth));
-      expect(find.text('Sign in with Apple'), findsOneWidget);
+      expect(
+        find.text('Sign in with Apple'),
+        kAppleSignInEnabled ? findsOneWidget : findsNothing,
+      );
     });
 
-    testWidgets('renders Sign in with Google button', (tester) async {
+    testWidgets('shows Sign in with Google only when it is configured',
+        (tester) async {
       await tester.pumpWidget(_buildLoginScreen(mockAuth));
-      expect(find.text('Sign in with Google'), findsOneWidget);
+      // Gated on [kGoogleSignInEnabled] so a provider that cannot complete is
+      // never offered — see lib/core/config/auth_provider_config.dart.
+      expect(
+        find.text('Sign in with Google'),
+        kGoogleSignInEnabled ? findsOneWidget : findsNothing,
+      );
     });
 
     testWidgets('renders Forgot password link', (tester) async {
