@@ -2,12 +2,19 @@
 
 _Last updated: July 27, 2026_
 
-> **Keep in sync with the in-app copy.** The app renders this policy from
-> `lib/features/settings/privacy_policy_content.dart`. When you change one,
-> change the other, and bump the date in both.
->
-> Host this file at a stable HTTPS URL (GitHub Pages works), then put that URL
-> on both store listings and in `kPrivacyPolicyUrl`.
+<!--
+  MAINTAINER NOTE (not rendered anywhere, including the published site).
+
+  This file is the source of truth for the hosted policy. The app renders the
+  same policy from lib/features/settings/privacy_policy_content.dart — when you
+  change one, change the other and bump the date in both. A test enforces that
+  the date and section headings match.
+
+  Publishing: .github/workflows/pages.yml converts this file to HTML via
+  tool/render_privacy_policy.py and deploys it to GitHub Pages on every push to
+  master. Only that generated page is published — docs/ is never served.
+-->
+
 
 ## The short version
 
