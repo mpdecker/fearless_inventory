@@ -172,6 +172,12 @@ Still open (needs console access or hosting, not code):
   `lib/core/config/auth_provider_config.dart` is `false`, and a test refuses to
   let it be `true` while the placeholders remain. Flip it once the OAuth
   clients exist. Apple Sign In and email/password are unaffected.
-- Google Play Data Safety form (5.1) — declare account email; location and
-  contacts are used on-device only and are not collected.
+- Google Play Data Safety form (5.1) — answers drafted in
+  `docs/play-data-safety.md`, ready to transcribe. One judgment call is flagged
+  there: whether the typed city/zip sent to Nominatim counts as approximate
+  location (recommendation: declare it).
+- App Review notes — `docs/app-review-information-template.md` is filled in and
+  corrected. **No demo account is needed** now that local-only mode exists; the
+  old note claiming a mandatory account flow was stale and would have misled
+  the reviewer.
 - AA literature licensing.
