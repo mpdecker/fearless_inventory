@@ -4,8 +4,9 @@
 .dart_tool/
 .packages
 build/
-# If you're building an application, you may want to check-in your pubspec.lock
-pubspec.lock
+# This IS an application, so pubspec.lock is checked in: it keeps CI and
+# release builds on the same resolved dependency versions.
+# pubspec.lock
 
 # Directory created by dartdoc
 # If you don't generate documentation locally you can remove this line.
