@@ -268,27 +268,31 @@ class _LiteratureSectionReaderScreenState
                       editableState.textEditingValue.selection;
                   return AdaptiveTextSelectionToolbar.buttonItems(
                     anchors: editableState.contextMenuAnchors,
-                    buttonItems: <ContextMenuButtonItem>[
-                      ...editableState.contextMenuButtonItems,
-                      if (!selection.isCollapsed) ...[
-                        ContextMenuButtonItem(
-                          label: 'Highlight',
-                          onPressed: () {
-                            editableState.hideToolbar();
-                            _createFromSelection(selection, text,
-                                withNote: false);
-                          },
-                        ),
-                        ContextMenuButtonItem(
-                          label: 'Note',
-                          onPressed: () {
-                            editableState.hideToolbar();
-                            _createFromSelection(selection, text,
-                                withNote: true);
-                          },
-                        ),
-                      ],
-                    ],
+                    // Highlight and Note come first, ahead of the platform's
+                    // Copy / Look Up / Search Web. iOS only shows the first few
+                    // items and hides the rest behind an overflow arrow, so
+                    // appending these buried the screen's primary actions one
+                    // tap deep.
+                    buttonItems: annotationMenuItemsFirst(
+                      hasSelection: !selection.isCollapsed,
+                      highlightItem: ContextMenuButtonItem(
+                        label: 'Highlight',
+                        onPressed: () {
+                          editableState.hideToolbar();
+                          _createFromSelection(selection, text,
+                              withNote: false);
+                        },
+                      ),
+                      noteItem: ContextMenuButtonItem(
+                        label: 'Note',
+                        onPressed: () {
+                          editableState.hideToolbar();
+                          _createFromSelection(selection, text,
+                              withNote: true);
+                        },
+                      ),
+                      platformItems: editableState.contextMenuButtonItems,
+                    ),
                   );
                 },
               ),

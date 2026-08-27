@@ -129,4 +129,40 @@ void main() {
       expect(resolveSelectionRange(100, 120, 100), isNull);
     });
   });
+  group('selection toolbar ordering', () {
+    test('Highlight and Note come before the platform items', () {
+      final items = annotationMenuItemsFirst<String>(
+        hasSelection: true,
+        highlightItem: 'Highlight',
+        noteItem: 'Note',
+        platformItems: const ['Copy', 'Look Up', 'Search Web'],
+      );
+
+      // iOS shows only the leading entries; the rest go behind an overflow
+      // arrow. The screen's own actions must not be the ones hidden.
+      expect(items.first, 'Highlight');
+      expect(items[1], 'Note');
+      expect(items, ['Highlight', 'Note', 'Copy', 'Look Up', 'Search Web']);
+    });
+
+    test('platform items are preserved in order', () {
+      final items = annotationMenuItemsFirst<String>(
+        hasSelection: true,
+        highlightItem: 'Highlight',
+        noteItem: 'Note',
+        platformItems: const ['Copy', 'Look Up'],
+      );
+      expect(items.sublist(2), ['Copy', 'Look Up']);
+    });
+
+    test('no annotation actions when nothing is selected', () {
+      final items = annotationMenuItemsFirst<String>(
+        hasSelection: false,
+        highlightItem: 'Highlight',
+        noteItem: 'Note',
+        platformItems: const ['Paste'],
+      );
+      expect(items, ['Paste']);
+    });
+  });
 }

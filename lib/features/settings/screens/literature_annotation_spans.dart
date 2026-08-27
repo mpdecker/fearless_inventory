@@ -74,3 +74,22 @@ List<AnnotationRun> computeAnnotationRuns(
   if (end <= start) return null;
   return (start: start, end: end);
 }
+
+/// Builds the text-selection toolbar items for the literature reader.
+///
+/// The screen's own actions are returned **before** [platformItems] on purpose:
+/// iOS shows only the first few entries and hides the rest behind an overflow
+/// arrow, so appending them put Highlight and Note one tap deeper than the
+/// platform's Copy / Look Up / Search Web — the wrong priority on a screen
+/// whose whole purpose is annotating.
+List<T> annotationMenuItemsFirst<T>({
+  required bool hasSelection,
+  required T highlightItem,
+  required T noteItem,
+  required List<T> platformItems,
+}) {
+  return [
+    if (hasSelection) ...[highlightItem, noteItem],
+    ...platformItems,
+  ];
+}
