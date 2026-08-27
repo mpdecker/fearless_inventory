@@ -191,7 +191,7 @@ class LiteraturePdfCatalogService {
       for (var p = startPage; p <= endPage; p++) {
         final page = doc.pages[p - 1];
         final text = await page.loadText();
-        final t = text.fullText.trim();
+        final t = (text?.fullText ?? '').trim();
         if (t.isEmpty) continue;
         if (buf.isNotEmpty) buf.writeln();
         buf.writeln(t);
@@ -231,7 +231,7 @@ class LiteraturePdfCatalogService {
         final out = <String>[];
         for (final page in doc.pages) {
           final text = await page.loadText();
-          out.add(text.fullText);
+          out.add(text?.fullText ?? '');
         }
         _pageTextsMem[bookKey] = out;
         return out;

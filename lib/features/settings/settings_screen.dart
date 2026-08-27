@@ -84,20 +84,14 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => _handlePdfExport(ref),
           ),
 
-          // ── Amends Excel / CSV ───────────────────────────────────────
+          // ── Amends CSV ───────────────────────────────────────────────
           ListTile(
             leading:
                 const Icon(Icons.table_chart, color: Colors.green),
-            title: const Text('Export Amends to Excel'),
-            subtitle: const Text('Full restitution plan with status columns'),
-            onTap: () => _handleExcelExport(ref),
-          ),
-          ListTile(
-            leading:
-                const Icon(Icons.description_outlined, color: Colors.lightGreen),
-            title: const Text('Export Amends to CSV'),
+            title: const Text('Export Amends to Spreadsheet'),
             subtitle: const Text(
-                'UTF-8 spreadsheet — opens in Numbers, Sheets, or Excel'),
+                'Full restitution plan with status columns — opens in '
+                'Numbers, Sheets, or Excel'),
             onTap: () => _handleCsvExport(ref),
           ),
 
@@ -349,11 +343,6 @@ class SettingsScreen extends ConsumerWidget {
       harms: harms,
       reviews: reviews,
     );
-  }
-
-  Future<void> _handleExcelExport(WidgetRef ref) async {
-    final amends = await ref.read(amendsRepositoryProvider).watchAll().first;
-    await ExportService.exportToExcel(amends);
   }
 
   Future<void> _handleCsvExport(WidgetRef ref) async {

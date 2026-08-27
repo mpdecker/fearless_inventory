@@ -14,13 +14,13 @@ import 'package:fearless_inventory/data/services/export_service.dart';
 /// `flutter test integration_test/export_share_flow_test.dart`
 ///
 /// Covers Phase 7 automation gate: PDF bytes build, Documents/exports,
-/// Excel encode, UTF-8 CSV with BOM. Print dialog and UIActivityViewController
+/// UTF-8 CSV with BOM. Print dialog and UIActivityViewController
 /// require manual checks on iOS.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'export: path_provider dirs, Step 4 PDF bytes, xlsx/csv under exports',
+      'export: path_provider dirs, Step 4 PDF bytes, csv under exports',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
 
@@ -51,20 +51,6 @@ void main() {
     );
     expect(pdfBytes.length, greaterThan(100));
     expect(String.fromCharCodes(pdfBytes.take(4)), '%PDF');
-
-    final xlsx = await ExportService.buildAmendsExcelXFile([
-      Amend(
-        id: 1,
-        person: 'Alex',
-        amendsType: AmendsType.personal,
-        plan: 'Talk honestly',
-        priority: 1,
-        status: 'pending',
-        createdAt: now,
-      ),
-    ]);
-    expect(await File(xlsx.path).exists(), isTrue);
-    expect(await File(xlsx.path).length(), greaterThan(50));
 
     final csvX = await ExportService.buildAmendsCsvXFile([
       Amend(

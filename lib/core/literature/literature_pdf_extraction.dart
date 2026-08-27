@@ -138,7 +138,7 @@ Future<String> extractPageRangeText(
   for (var p = startPage; p <= endPage; p++) {
     final page = doc.pages[p - 1];
     final text = await page.loadText();
-    final t = text.fullText.trim();
+    final t = (text?.fullText ?? '').trim();
     if (t.isEmpty) continue;
     if (buf.isNotEmpty) buf.writeln();
     buf.writeln(t);
@@ -150,7 +150,7 @@ Future<List<String>> extractAllPageTexts(PdfDocument doc) async {
   final out = <String>[];
   for (final page in doc.pages) {
     final text = await page.loadText();
-    out.add(text.fullText);
+    out.add(text?.fullText ?? '');
   }
   return out;
 }

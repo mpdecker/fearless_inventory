@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:csv/csv.dart';
-import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -665,59 +664,10 @@ class ExportService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 4. Excel / CSV Amends Tracker
+  // 4. CSV Amends Tracker
   // ─────────────────────────────────────────────────────────────────────────
 
-  static const _xlsxMime =
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-  /// Writes the amends workbook under Documents/exports and returns an [XFile]
-  /// with a MIME type suitable for Numbers / Sheets / Mail.
-  static Future<XFile> buildAmendsExcelXFile(List<Amend> amends) async {
-    var excel = Excel.createExcel();
-    Sheet sheet = excel['Amends Planner'];
-
-    sheet.appendRow([
-      TextCellValue('Person'),
-      TextCellValue('Type'),
-      TextCellValue('Plan'),
-      TextCellValue('Status'),
-      TextCellValue('Priority'),
-      TextCellValue('Date Planned'),
-      TextCellValue('Date Completed'),
-    ]);
-
-    for (var a in amends) {
-      sheet.appendRow([
-        TextCellValue(a.person),
-        TextCellValue(a.amendsType?.name ?? 'unspecified'),
-        TextCellValue(a.plan ?? ''),
-        TextCellValue(a.status),
-        IntCellValue(a.priority),
-        TextCellValue(
-            a.datePlanned?.toIso8601String().split('T').first ?? ''),
-        TextCellValue(
-            a.dateCompleted?.toIso8601String().split('T').first ?? ''),
-      ]);
-    }
-
-    final directory = await ensureExportsDirectory();
-    final path = p.join(
-      directory.path,
-      'amends_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-    );
-    final file = File(path);
-    await file.writeAsBytes(excel.encode()!);
-
-    return XFile(path, mimeType: _xlsxMime);
-  }
-
-  static Future<void> exportToExcel(List<Amend> amends) async {
-    final xFile = await buildAmendsExcelXFile(amends);
-    await Share.shareXFiles([xFile], text: 'My Amends Plan Export');
-  }
-
-  /// UTF-8 CSV with BOM (helps Excel detect encoding); same columns as Excel.
+  /// UTF-8 CSV with BOM (helps Excel and Numbers detect the encoding).
   static Future<XFile> buildAmendsCsvXFile(List<Amend> amends) async {
     const converter = ListToCsvConverter(eol: '\r\n');
     final rows = <List<dynamic>>[
