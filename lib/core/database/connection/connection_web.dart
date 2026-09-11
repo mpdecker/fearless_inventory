@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
@@ -20,12 +21,20 @@ import 'package:web/web.dart' as web;
 // used. Rather than fight sqlite3mc's internals, the web build runs a
 // *plain* (unencrypted-by-SQLite) in-memory database, and encrypts the
 // raw file bytes ourselves with WebCrypto (PBKDF2 → AES-GCM) before every
-// persist to localStorage. Same guarantee (data at rest is unreadable
-// without the passphrase), simpler and more auditable implementation.
+// persist to IndexedDB. Same guarantee (data at rest is unreadable without
+// the passphrase), simpler and more auditable implementation.
+//
+// IndexedDB (not localStorage) because the encrypted blob easily exceeds
+// localStorage's ~5-10MB per-origin cap on some browsers — a single journal
+// entry already produces a multi-MB SQLite file (page preallocation), and
+// IndexedDB stores the binary envelope directly instead of paying a ~33%
+// base64 tax on top.
 // ─────────────────────────────────────────────────────────────────────────
 
 const _dbPath = '/fearless_inventory.db';
-const _storageKey = 'fearless_inventory_encrypted_db_v1';
+const _idbName = 'fearless_inventory_web_kv';
+const _idbStoreName = 'encrypted_db';
+const _idbEnvelopeKey = 'db_envelope_v1';
 const _pbkdf2Iterations = 210000;
 const _saltLength = 16;
 const _ivLength = 12;
@@ -99,26 +108,73 @@ class _Envelope {
   _Envelope({required this.salt, required this.iv, required this.ciphertext});
 }
 
-_Envelope? _loadEnvelope() {
-  final raw = web.window.localStorage.getItem(_storageKey);
-  if (raw == null) return null;
-  final json = jsonDecode(raw) as Map<String, dynamic>;
-  return _Envelope(
-    salt: base64Decode(json['salt'] as String),
-    iv: base64Decode(json['iv'] as String),
-    ciphertext: base64Decode(json['data'] as String),
-  );
+// ─────────────────────────────────────────────────────────────────────────
+// IndexedDB key-value store for the encrypted envelope
+//
+// A single object store holding one record (key [_idbEnvelopeKey]) whose
+// value is a plain JS object of three Uint8Arrays — IndexedDB's structured
+// clone stores binary data natively, no base64 needed.
+// ─────────────────────────────────────────────────────────────────────────
+
+Future<web.IDBDatabase> _openIdb() {
+  final completer = Completer<web.IDBDatabase>();
+  final request = web.window.indexedDB.open(_idbName, 1);
+  request.onupgradeneeded = ((web.Event _) {
+    (request.result as web.IDBDatabase).createObjectStore(_idbStoreName);
+  }).toJS;
+  request.onsuccess = ((web.Event _) {
+    completer.complete(request.result as web.IDBDatabase);
+  }).toJS;
+  request.onerror = ((web.Event _) {
+    completer.completeError(
+      request.error ?? StateError('IndexedDB open failed'),
+    );
+  }).toJS;
+  return completer.future;
 }
 
-void _saveEnvelope(Uint8List salt, Uint8List iv, Uint8List ciphertext) {
-  web.window.localStorage.setItem(
-    _storageKey,
-    jsonEncode({
-      'salt': base64Encode(salt),
-      'iv': base64Encode(iv),
-      'data': base64Encode(ciphertext),
-    }),
-  );
+Future<_Envelope?> _loadEnvelope() async {
+  final db = await _openIdb();
+  final completer = Completer<_Envelope?>();
+  final store = db.transaction(_idbStoreName.toJS, 'readonly').objectStore(_idbStoreName);
+  final request = store.get(_idbEnvelopeKey.toJS);
+  request.onsuccess = ((web.Event _) {
+    final result = request.result;
+    if (result == null) {
+      completer.complete(null);
+      return;
+    }
+    final obj = result as JSObject;
+    completer.complete(_Envelope(
+      salt: (obj['salt'] as JSUint8Array).toDart,
+      iv: (obj['iv'] as JSUint8Array).toDart,
+      ciphertext: (obj['data'] as JSUint8Array).toDart,
+    ));
+  }).toJS;
+  request.onerror = ((web.Event _) {
+    completer.completeError(request.error ?? StateError('IndexedDB read failed'));
+  }).toJS;
+  final envelope = await completer.future;
+  db.close();
+  return envelope;
+}
+
+Future<void> _saveEnvelope(Uint8List salt, Uint8List iv, Uint8List ciphertext) async {
+  final db = await _openIdb();
+  final completer = Completer<void>();
+  final tx = db.transaction(_idbStoreName.toJS, 'readwrite');
+  final store = tx.objectStore(_idbStoreName);
+  final value = JSObject()
+    ..['salt'] = salt.toJS
+    ..['iv'] = iv.toJS
+    ..['data'] = ciphertext.toJS;
+  store.put(value, _idbEnvelopeKey.toJS);
+  tx.oncomplete = ((web.Event _) => completer.complete()).toJS;
+  tx.onerror = ((web.Event _) {
+    completer.completeError(tx.error ?? StateError('IndexedDB write failed'));
+  }).toJS;
+  await completer.future;
+  db.close();
 }
 
 /// Encrypts and persists the in-memory database file to localStorage after
@@ -141,7 +197,7 @@ class _PersistingInterceptor extends QueryInterceptor {
     final plaintext = data.buffer.asUint8List(0, data.length);
     final iv = _randomBytes(_ivLength);
     final ciphertext = await _encrypt(key, iv, plaintext);
-    _saveEnvelope(salt, iv, ciphertext);
+    await _saveEnvelope(salt, iv, ciphertext);
   }
 
   @override
@@ -213,7 +269,7 @@ QueryExecutor openConnection(String encryptionKey) {
     final fs = InMemoryFileSystem();
     sqlite3.registerVirtualFileSystem(fs, makeDefault: true);
 
-    final envelope = _loadEnvelope();
+    final envelope = await _loadEnvelope();
     final Uint8List salt;
     web.CryptoKey key;
 
@@ -240,5 +296,5 @@ QueryExecutor openConnection(String encryptionKey) {
 /// used by [WebPassphraseScreen] to decide "create a passphrase" vs
 /// "enter your passphrase".
 Future<bool> webDatabaseExists() async {
-  return web.window.localStorage.getItem(_storageKey) != null;
+  return (await _loadEnvelope()) != null;
 }
