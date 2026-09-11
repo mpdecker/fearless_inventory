@@ -19,6 +19,7 @@ import 'core/services/onboarding_service.dart';
 import 'core/services/pin_service.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/screens/web_passphrase_screen.dart';
 import 'firebase_options.dart';
 
 /// Central sink for uncaught errors. Presents them in debug and logs them
@@ -72,6 +73,46 @@ Future<void> _bootstrap() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Web has no OS keystore for a transparent per-device key (KeyService is
+  // native-only, dart:io-based) and no working plugin implementations for
+  // local notifications / PIN+biometric lock is replaced by the passphrase
+  // gate itself (see WebPassphraseScreen). Everything below this branch is
+  // native-only.
+  if (kIsWeb) {
+    // No ProviderScope yet — WebPassphraseScreen doesn't use Riverpod, and
+    // we don't have a database (hence no databaseProvider override) until
+    // the user unlocks. Once they do, runApp() is called a *second* time —
+    // a well-supported way to replace the root widget — with a single
+    // top-level ProviderScope, exactly mirroring the native flow below
+    // instead of nesting one ProviderScope inside another.
+    runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.dark,
+        home: WebPassphraseScreen(
+          onUnlocked: (db) {
+            runApp(
+              ProviderScope(
+                overrides: [
+                  databaseProvider.overrideWith((ref) {
+                    ref.onDispose(() => db.close());
+                    return db;
+                  }),
+                ],
+                // No pending-notification handling on web — there's
+                // nothing to process a launch notification from.
+                child: const FearlessInventoryApp(initialOnboardingComplete: false),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    return;
+  }
 
   // ── Per-device database encryption key ──────────────────────────────────
   final dbFile = await KeyService.productionDatabaseFile();

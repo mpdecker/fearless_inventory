@@ -1,12 +1,10 @@
 import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:sqlite3/sqlite3.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/amends_type.dart';
-import '../services/key_service.dart';
+import 'connection/connection_stub.dart'
+    if (dart.library.html) 'connection/connection_web.dart'
+    if (dart.library.io) 'connection/connection_native.dart' as conn;
 
 part 'database.g.dart';
 
@@ -725,42 +723,18 @@ class AppDatabase extends _$AppDatabase {
 
 // ─────────────────────────────────────────────
 // CONNECTION FACTORY
+//
+// Native (iOS/Android/desktop/VM tests) vs web dispatch through the
+// conditional `conn` import above — see connection/connection_native.dart
+// and connection/connection_web.dart. Web has no equivalent of a File-backed
+// forTesting connection; [conn.openConnectionAt] throws there.
 // ─────────────────────────────────────────────
 
-void _configureEncryptedConnection(Database db, String encryptionKey) {
-  // SQLite3MultipleCiphers (bundled via pubspec `hooks` → sqlite3: source: sqlite3mc).
-  // SQLCipher-compatible settings for existing installs that used PRAGMA key + legacy.
-  db.execute("PRAGMA key = '$encryptionKey';");
-  db.execute('PRAGMA cipher = "sqlcipher";');
-  db.execute('PRAGMA legacy = 4;');
-  db.execute('PRAGMA foreign_keys = ON;');
-}
+QueryExecutor _openConnectionAt(File file, String encryptionKey) =>
+    conn.openConnectionAt(file.path, encryptionKey);
 
-QueryExecutor _openConnectionAt(File file, String encryptionKey) {
-  return LazyDatabase(() async {
-    // [AppDatabase.forTesting] only: keep SQLite on the main isolate. Using
-    // [NativeDatabase.createInBackground] under [testWidgets] + an early
-    // [WidgetTester.pump] can stall indefinitely waiting on the isolate port
-    // (e.g. notification_navigation_test.dart).
-    return NativeDatabase(
-      file,
-      setup: (db) => _configureEncryptedConnection(db, encryptionKey),
-    );
-  });
-}
-
-QueryExecutor _openConnection(String encryptionKey) {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(
-      p.join(dbFolder.path, KeyService.productionDatabaseFileName),
-    );
-    return NativeDatabase.createInBackground(
-      file,
-      setup: (db) => _configureEncryptedConnection(db, encryptionKey),
-    );
-  });
-}
+QueryExecutor _openConnection(String encryptionKey) =>
+    conn.openConnection(encryptionKey);
 
 // ─────────────────────────────────────────────
 // PROVIDER
