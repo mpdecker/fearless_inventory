@@ -493,7 +493,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _handleDonate(BuildContext context) async {
-    final url = Uri.parse('https://ko-fi.com/fearless_inventory'); // Placeholder URL
+    final url = Uri.parse('https://ko-fi.com/matthieudecker');
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
