@@ -18,7 +18,14 @@ dependencies:
   # Database (Drift + sqlite3 with SQLite3MultipleCiphers via build hook — replaces
   # sqlite3_flutter_libs / sqlcipher_flutter_libs for package:sqlite3 3.x)
   drift: ^2.14.1
-  sqlite3: ^3.2.0
+  # Web build uses sqlite3/wasm.dart's WasmSqlite3.loadFromUrlString +
+  # InMemoryFileSystem — both need >=3.5.2, matching the sqlite3mc.wasm
+  # binary vendored at web/sqlite3mc.wasm (from the sqlite3-3.5.2 GitHub
+  # release — the wasm binary and these bindings are version-paired).
+  sqlite3: ^3.5.2
+  # For the web DB connection (connection_web.dart) to read/write
+  # localStorage directly — was already a transitive dep via drift/sqlite3.
+  web: ^1.1.1
   path_provider: ^2.1.1
   path: ^1.8.3
 

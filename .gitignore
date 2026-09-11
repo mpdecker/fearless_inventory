@@ -31,3 +31,4 @@ doc/api/
 
 # Flutter tooling crash reports
 flutter_*.log
+.wrangler

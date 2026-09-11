@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -67,6 +68,15 @@ class BootstrapShell extends ConsumerWidget {
             // A real (non-guest) account must verify its email first.
             if (user != null && !user.emailVerified) {
               return const EmailVerificationScreen();
+            }
+
+            // Web's passphrase gate (WebPassphraseScreen, run before
+            // BootstrapShell even mounts — see main.dart's _WebBootstrap)
+            // already serves as the one true "unlock" secret there. PIN +
+            // biometric are a native-only second layer on top of the
+            // OS-keystore-backed encryption key; skip straight to HomeScreen.
+            if (kIsWeb) {
+              return const HomeScreen();
             }
 
             final lockState = ref.watch(appLockProvider);
