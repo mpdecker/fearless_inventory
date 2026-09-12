@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'meeting_source_adapter.dart';
+import 'web_cors_proxy_client.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TsmlAdapter
@@ -53,7 +54,7 @@ class TsmlAdapter implements MeetingSourceAdapter {
         _name = name,
         _fellowship = fellowship,
         _feedUrl = '${baseUrl.trimRight()}/wp-json/tsml/meetings',
-        _client = client ?? http.Client();
+        _client = client ?? createDefaultMeetingHttpClient();
 
   /// Construct with an explicit [feedUrl] when the feed is at a custom path
   /// (e.g. a static JSON file or a non-standard REST route).
@@ -67,7 +68,7 @@ class TsmlAdapter implements MeetingSourceAdapter {
         _name = name,
         _fellowship = fellowship,
         _feedUrl = feedUrl,
-        _client = client ?? http.Client();
+        _client = client ?? createDefaultMeetingHttpClient();
 
   // ── MeetingSourceAdapter ─────────────────────────────────────────────────
 

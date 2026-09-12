@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'meeting_source_adapter.dart';
+import 'web_cors_proxy_client.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TsmlPageAdapter
@@ -62,7 +63,7 @@ class TsmlPageAdapter implements MeetingSourceAdapter {
         _name = name,
         _meetingsUrl = meetingsUrl,
         _fellowship = fellowship,
-        _client = client ?? http.Client();
+        _client = client ?? createDefaultMeetingHttpClient();
 
   // ── MeetingSourceAdapter ─────────────────────────────────────────────────
 
