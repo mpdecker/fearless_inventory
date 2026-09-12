@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'meeting_source_adapter.dart';
+import 'web_cors_proxy_client.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -61,7 +62,7 @@ const _kOiaaFeedUrl =
 class OiaaAdapter implements MeetingSourceAdapter {
   final http.Client _client;
 
-  OiaaAdapter({http.Client? client}) : _client = client ?? http.Client();
+  OiaaAdapter({http.Client? client}) : _client = client ?? createDefaultMeetingHttpClient();
 
   // ── MeetingSourceAdapter ─────────────────────────────────────────────────
 

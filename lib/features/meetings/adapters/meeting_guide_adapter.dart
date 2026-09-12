@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'meeting_source_adapter.dart';
+import 'web_cors_proxy_client.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -44,7 +45,7 @@ class MeetingGuideAdapter implements MeetingSourceAdapter {
     required this.regionKey,
     required this.states,
     http.Client? client,
-  }) : _client = client ?? http.Client();
+  }) : _client = client ?? createDefaultMeetingHttpClient();
 
   // ── Named region factories ────────────────────────────────────────────────
 
