@@ -34,6 +34,7 @@ void main() {
       overrides: [
         firebaseAuthServiceProvider.overrideWithValue(mockAuth),
         cloudBackupServiceProvider.overrideWithValue(mockBackup),
+        pageReloadProvider.overrideWithValue(() {}),
       ],
     );
     addTearDown(container.dispose);
@@ -125,6 +126,32 @@ void main() {
     expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
   });
 
+  test('does not overwrite state or call backup for a stale sign-in check after sign-out', () async {
+    final markerCompleter = Completer<CloudSyncMarker?>();
+    final remoteCompleter = Completer<DateTime?>();
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) => markerCompleter.future);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) => remoteCompleter.future);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    // Sign out while the check is still in flight.
+    authController.add(null);
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+
+    // Now let the stale check's futures resolve as the seed-backup path
+    // (no remote backup yet) — this is the branch that would otherwise
+    // call `_service.backup(uid)` for the now-signed-out account.
+    markerCompleter.complete(null);
+    remoteCompleter.complete(null);
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+    verifyNever(() => mockBackup.backup(uid));
+  });
+
   test('useCloudBackup restores and transitions to synced', () async {
     final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
     when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
@@ -150,15 +177,54 @@ void main() {
     when(() => mockBackup.restoreVerifyingPassphrase(uid, 'wrong'))
         .thenThrow(Exception('bad passphrase'));
 
-    container.listen(cloudSyncProvider, (_, __) {});
+    var reloadCalled = false;
+    final localContainer = ProviderContainer(
+      overrides: [
+        firebaseAuthServiceProvider.overrideWithValue(mockAuth),
+        cloudBackupServiceProvider.overrideWithValue(mockBackup),
+        pageReloadProvider.overrideWithValue(() => reloadCalled = true),
+      ],
+    );
+    addTearDown(localContainer.dispose);
+
+    localContainer.listen(cloudSyncProvider, (_, __) {});
     authController.add(signedInUser());
     await pumpEventQueue();
 
     await expectLater(
-      container.read(cloudSyncProvider.notifier).useCloudBackup('wrong'),
+      localContainer.read(cloudSyncProvider.notifier).useCloudBackup('wrong'),
       throwsException,
     );
-    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+    expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+    expect(reloadCalled, isFalse);
+  });
+
+  test('useCloudBackup reloads the page exactly once after a successful restore', () async {
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+    when(() => mockBackup.restoreVerifyingPassphrase(uid, 'correct-passphrase'))
+        .thenAnswer((_) async => remoteUpdatedAt);
+
+    var reloadCount = 0;
+    final localContainer = ProviderContainer(
+      overrides: [
+        firebaseAuthServiceProvider.overrideWithValue(mockAuth),
+        cloudBackupServiceProvider.overrideWithValue(mockBackup),
+        pageReloadProvider.overrideWithValue(() => reloadCount++),
+      ],
+    );
+    addTearDown(localContainer.dispose);
+
+    localContainer.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+    expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+
+    await localContainer.read(cloudSyncProvider.notifier).useCloudBackup('correct-passphrase');
+
+    expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    expect(reloadCount, 1);
   });
 
   test('keepLocalData records the resolution and transitions to synced', () async {

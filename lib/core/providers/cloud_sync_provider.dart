@@ -29,6 +29,10 @@ final cloudBackupServiceProvider = Provider<CloudBackupService>(
   (_) => backup_factory.createCloudBackupService(),
 );
 
+/// Reloads the page after a successful restore — override in tests to
+/// inject a no-op/spy, matching [cloudBackupServiceProvider].
+final pageReloadProvider = Provider<void Function()>((_) => page_reload.reloadPage);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,6 +118,8 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
     final marker = await _service.readMarker(uid);
     final remoteUpdatedAt = await _service.remoteBackupUpdatedAt(uid);
 
+    if (_uid != uid) return; // signed out or switched accounts while this check was in flight
+
     if (remoteUpdatedAt == null) {
       // Nothing in the cloud yet for this account — this device's data
       // becomes the seed.
@@ -168,18 +174,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       localBackedUpAt: updatedAt,
       remoteUpdatedAt: updatedAt,
     );
-    // `page_reload` has no DI seam to override in tests (unlike
-    // cloudBackupServiceProvider), and page_reload_native.dart intentionally
-    // throws — it documents that cloud sync never reaches this call in a
-    // real native build. Under `flutter test`'s VM target that "native"
-    // variant *is* reached directly, so swallow the throw there; on the
-    // real web build reloadPage() always succeeds and this is a no-op.
-    try {
-      page_reload.reloadPage();
-    } on UnsupportedError {
-      // No page to reload outside the web build (native app, or this
-      // notifier under test).
-    }
+    ref.read(pageReloadProvider)();
   }
 
   Future<void> keepLocalData() async {
