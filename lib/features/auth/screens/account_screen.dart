@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/cloud_sync_provider.dart';
 import '../../../core/services/firebase_auth_service.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -552,6 +553,27 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
           const SizedBox(height: 4),
         ],
 
+        // ── Cloud backup status ─────────────────────────────────────────
+        Builder(builder: (context) {
+          final syncState = ref.watch(cloudSyncProvider);
+          final label = switch (syncState.phase) {
+            CloudSyncPhase.synced when syncState.localBackedUpAt != null =>
+              'Last backed up: ${_formatRelative(syncState.localBackedUpAt!)}',
+            CloudSyncPhase.needsReconciliation => 'Backup needs your attention',
+            _ => 'Not backed up yet',
+          };
+          return Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_done_outlined, color: Colors.white54, size: 16),
+                const SizedBox(width: 8),
+                Text(label, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+              ],
+            ),
+          );
+        }),
+
         const Divider(height: 32, color: Colors.white12),
 
         // ── Sign out ──────────────────────────────────────────────────────
@@ -679,4 +701,12 @@ class _ProviderChip extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatRelative(DateTime dt) {
+  final diff = DateTime.now().toUtc().difference(dt.toUtc());
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
 }
