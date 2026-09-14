@@ -65,11 +65,21 @@ class WebCloudBackupService implements CloudBackupService {
 
   @override
   Future<DateTime> restoreVerifyingPassphrase(String uid, String passphrase) async {
-    final bytes = await _ref(uid).getData(_maxBackupBytes);
-    if (bytes == null) {
-      throw StateError('No cloud backup found for this account.');
+    // Fetching and decoding the backup can fail for reasons that have
+    // nothing to do with the passphrase (network error, Storage
+    // misconfiguration, a malformed object) — wrapped in
+    // CloudBackupUnreachable so callers never describe those as "wrong
+    // passphrase" to the user.
+    final DecodedBackupEnvelope decoded;
+    try {
+      final bytes = await _ref(uid).getData(_maxBackupBytes);
+      if (bytes == null) {
+        throw StateError('No cloud backup found for this account.');
+      }
+      decoded = decodeBackupEnvelope(bytes);
+    } catch (e) {
+      throw CloudBackupUnreachable(e);
     }
-    final decoded = decodeBackupEnvelope(bytes);
     final key = await deriveAesKey(passphrase, decoded.salt);
     // Throws (AES-GCM tag mismatch) on a wrong passphrase — deliberately
     // not caught here, so the caller sees the failure and can prompt again

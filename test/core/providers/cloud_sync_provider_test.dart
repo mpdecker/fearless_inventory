@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -250,6 +251,72 @@ void main() {
 
     expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
     expect(reloadCount, 1);
+  });
+
+  test('a local write triggers a backup after the debounce delay, not immediately', () {
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+    final backedUpAt = DateTime.utc(2026, 3, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => backedUpAt);
+
+    fakeAsync((async) {
+      container.listen(cloudSyncProvider, (_, __) {});
+      authController.add(signedInUser());
+      async.flushMicrotasks();
+      expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+      verifyNever(() => mockBackup.backup(uid));
+
+      container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+      async.elapse(const Duration(seconds: 29));
+      verifyNever(() => mockBackup.backup(uid));
+
+      async.elapse(const Duration(seconds: 2)); // crosses the 30s debounce delay
+      verify(() => mockBackup.backup(uid)).called(1);
+      expect(container.read(cloudSyncProvider).localBackedUpAt, backedUpAt);
+    });
+  });
+
+  test('a continuous burst of local writes does not starve the debounced backup', () {
+    // Regression test: a trailing-edge debounce (cancel + reschedule on
+    // every write) never lets 30 quiet seconds elapse under a sustained
+    // burst — e.g. the meeting-finder sync writing a sync-metadata row for
+    // each of its ~15 sources over the first couple of minutes after
+    // sign-in — so the cloud backup would never fire for as long as the
+    // burst continues. The fix only schedules when no timer is already
+    // pending, guaranteeing progress within _debounceDelay of the first
+    // write in the burst.
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+    var backupCallCount = 0;
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async {
+      backupCallCount++;
+      return DateTime.utc(2026, 3, 1);
+    });
+
+    fakeAsync((async) {
+      container.listen(cloudSyncProvider, (_, __) {});
+      authController.add(signedInUser());
+      async.flushMicrotasks();
+
+      final notifier = container.read(cloudSyncProvider.notifier);
+      // A write every 5s for 2 minutes straight — continuously shorter than
+      // the 30s debounce delay, so a trailing-edge debounce never quiets.
+      for (var i = 0; i < 24; i++) {
+        notifier.debugTriggerLocalWrite();
+        async.elapse(const Duration(seconds: 5));
+      }
+
+      expect(
+        backupCallCount,
+        greaterThan(0),
+        reason: 'backup() was never called during a 120s continuous write burst — '
+            'the debounce was starved instead of throttling',
+      );
+    });
   });
 
   test('keepLocalData records the resolution and transitions to synced', () async {

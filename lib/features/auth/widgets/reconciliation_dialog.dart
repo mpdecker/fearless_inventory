@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/cloud_backup_service.dart';
+
 /// Shown whenever `CloudSyncNotifier` detects that the cloud backup and
 /// this device's data disagree. Never silently resolves either way — one
 /// of the two buttons must be tapped for anything to change; dismissing
@@ -54,6 +56,12 @@ class _ReconciliationDialogState extends State<ReconciliationDialog> {
       await widget.onUseCloudBackup(passphrase);
       if (!mounted) return;
       Navigator.of(context).pop();
+    } on CloudBackupUnreachable {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _error = "Couldn't reach the cloud backup. Check your connection and try again.";
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {

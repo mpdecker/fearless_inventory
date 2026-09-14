@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/connection/connection_stub.dart'
@@ -157,13 +158,31 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
     );
   }
 
+  // Deliberately NOT a trailing-edge debounce (cancel-and-reschedule on every
+  // write): a real device can produce a near-continuous stream of local
+  // writes for tens of seconds at a time (e.g. the meeting-finder sync
+  // fanning out to ~15 sources, each writing its own sync-metadata row on
+  // completion) — cancel-and-reschedule would push the backup out on every
+  // one of those writes and could starve it indefinitely. Scheduling only
+  // when no timer is already pending guarantees a backup fires within
+  // _debounceDelay of the *first* write in any burst, no matter how long
+  // the burst continues.
   void _onLocalWrite() {
     if (state.phase != CloudSyncPhase.synced) return;
     final uid = _uid;
     if (uid == null) return;
-    _debounce?.cancel();
-    _debounce = Timer(_debounceDelay, () => unawaited(_backupNow(uid)));
+    if (_debounce != null) return;
+    _debounce = Timer(_debounceDelay, () {
+      _debounce = null;
+      unawaited(_backupNow(uid));
+    });
   }
+
+  /// Test-only hook for exercising the debounce/throttle behavior above —
+  /// `conn.onLocalDbPersisted` (the real caller) lives in a web-only file
+  /// that can't be imported under `flutter test` (see Task 2's note).
+  @visibleForTesting
+  void debugTriggerLocalWrite() => _onLocalWrite();
 
   Future<void> _backupNow(String uid) async {
     final updatedAt = await _service.backup(uid);

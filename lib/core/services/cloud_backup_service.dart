@@ -17,6 +17,20 @@ class CloudSyncMarker {
   });
 }
 
+/// Thrown by [CloudBackupService.restoreVerifyingPassphrase] when the cloud
+/// backup couldn't be reached at all (network failure, CORS misconfiguration,
+/// a Firebase Storage error) — as opposed to a wrong passphrase, which is
+/// signaled by letting the underlying AES-GCM tag-mismatch exception
+/// propagate unwrapped. Callers must not describe this as "wrong
+/// passphrase": the passphrase was never actually checked.
+class CloudBackupUnreachable implements Exception {
+  final Object cause;
+  const CloudBackupUnreachable(this.cause);
+
+  @override
+  String toString() => 'CloudBackupUnreachable: $cause';
+}
+
 /// Encrypted whole-database backup/restore for one Firebase account, backed
 /// by Firebase Storage. Abstract so `CloudSyncNotifier` and its tests never
 /// need to import the concrete `WebCloudBackupService` (which pulls in
@@ -36,12 +50,14 @@ abstract class CloudBackupService {
 
   /// Downloads the cloud backup, verifies [passphrase] can decrypt it, and
   /// — only on success — overwrites the local IndexedDB envelope with the
-  /// cloud's salt/iv/ciphertext and updates the local marker. Throws if no
-  /// backup exists, or if [passphrase] is wrong (an AES-GCM tag mismatch,
-  /// the same signal `WebPassphraseScreen` already relies on). The caller
-  /// is responsible for reloading the page after a successful call — the
-  /// currently-running app instance still has the *old* local data loaded
-  /// in memory.
+  /// cloud's salt/iv/ciphertext and updates the local marker. Throws
+  /// [CloudBackupUnreachable] if the backup couldn't be downloaded at all
+  /// (network/CORS/Storage failure — the passphrase was never checked), or
+  /// throws the underlying AES-GCM tag-mismatch exception if [passphrase] is
+  /// wrong (the same signal `WebPassphraseScreen` already relies on). The
+  /// caller is responsible for reloading the page after a successful call —
+  /// the currently-running app instance still has the *old* local data
+  /// loaded in memory.
   Future<DateTime> restoreVerifyingPassphrase(String uid, String passphrase);
 
   /// This device's locally stored marker for [uid], or `null` if this

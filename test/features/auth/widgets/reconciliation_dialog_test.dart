@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:fearless_inventory/core/services/cloud_backup_service.dart';
 import 'package:fearless_inventory/features/auth/widgets/reconciliation_dialog.dart';
 
 void main() {
@@ -113,4 +114,23 @@ void main() {
     expect(find.textContaining('Could not decrypt'), findsOneWidget);
     expect(find.byType(ReconciliationDialog), findsOneWidget);
   });
+
+  testWidgets(
+    'shows a distinct network error (not "wrong passphrase") when the backup is unreachable',
+    (tester) async {
+      await pumpDialog(
+        tester,
+        remoteUpdatedAt: DateTime.utc(2026, 2, 15),
+        onUseCloudBackup: (_) async => throw const CloudBackupUnreachable('network error'),
+      );
+
+      await tester.enterText(find.byType(TextField), 'correct-passphrase');
+      await tester.tap(find.text('Use cloud backup'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining("Couldn't reach the cloud backup"), findsOneWidget);
+      expect(find.textContaining('Could not decrypt'), findsNothing);
+      expect(find.byType(ReconciliationDialog), findsOneWidget);
+    },
+  );
 }
