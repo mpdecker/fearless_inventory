@@ -38,6 +38,7 @@ void main() {
     'sponsor_call_logs',
     'rolodex_contacts',
     'literature_annotations',
+    'user_settings',
   };
 
   late Directory tempDir;
@@ -87,14 +88,14 @@ void main() {
       }
     });
 
-    test('schema version is 16 after fresh create', () async {
+    test('schema version is 17 after fresh create', () async {
       final db = await openDb();
       addTearDown(db.close);
       final row = await db
           .customSelect('PRAGMA user_version')
           .map((r) => r.read<int>('user_version'))
           .getSingle();
-      expect(row, 16);
+      expect(row, 17);
     });
 
     test('all user tables exist', () async {
@@ -260,6 +261,10 @@ void main() {
             RolodexContactsCompanion.insert(name: 'Bob S.'),
           );
 
+      await db.into(db.userSettings).insert(
+            UserSettingsCompanion.insert(id: const Value(0)),
+          );
+
       expect(await db.select(db.resentments).get(), hasLength(1));
       expect(await db.select(db.fears).get(), hasLength(1));
       expect(await db.select(db.harms).get(), hasLength(1));
@@ -282,6 +287,7 @@ void main() {
       expect(await db.select(db.literatureBookmarks).get(), hasLength(1));
       expect(await db.select(db.sponsorCallLogs).get(), hasLength(1));
       expect(await db.select(db.rolodexContacts).get(), hasLength(1));
+      expect(await db.select(db.userSettings).get(), hasLength(1));
     });
   });
 
@@ -387,7 +393,11 @@ void main() {
 
       await db.wipeAllData();
 
-      for (final table in expectedTables) {
+      // user_settings (the sobriety date) is deliberately excluded from
+      // wipeAllData() — it survives a "delete all data" the same way it
+      // always has, since it predates this table and moving storage
+      // shouldn't change that behavior.
+      for (final table in expectedTables.difference({'user_settings'})) {
         final count = await db
             .customSelect('SELECT COUNT(*) AS c FROM $table')
             .map((r) => r.read<int>('c'))

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../database/database.dart';
 import '../services/sobriety_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -8,21 +9,24 @@ import '../services/sobriety_service.dart';
 
 /// Holds the user's sobriety start date.
 /// null  → not yet set (prompts the user to enter a date).
-/// DateTime → the date they got sober (stored in secure storage).
+/// DateTime → the date they got sober (stored in the cloud-synced database).
 class SobrietyDateNotifier extends StateNotifier<AsyncValue<DateTime?>> {
-  SobrietyDateNotifier() : super(const AsyncValue.loading()) {
+  late final AppDatabase _db;
+
+  SobrietyDateNotifier(AppDatabase db) : super(const AsyncValue.loading()) {
+    _db = db;
     _load();
   }
 
   /// Constructs a notifier pre-seeded with [initialValue] and skips the
-  /// [FlutterSecureStorage] read.  Use only in tests.
+  /// database read. Use only in tests.
   @visibleForTesting
   SobrietyDateNotifier.testing({DateTime? initialValue})
       : super(AsyncValue.data(initialValue));
 
   Future<void> _load() async {
     try {
-      final date = await SobrietyService.getSobrietyDate();
+      final date = await SobrietyService.getSobrietyDate(_db);
       state = AsyncValue.data(date);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -31,13 +35,13 @@ class SobrietyDateNotifier extends StateNotifier<AsyncValue<DateTime?>> {
 
   /// Persists [date] and updates state immediately (no flicker).
   Future<void> setDate(DateTime date) async {
-    await SobrietyService.setSobrietyDate(date);
+    await SobrietyService.setSobrietyDate(_db, date);
     state = AsyncValue.data(date);
   }
 
   /// Clears the stored date.
   Future<void> clearDate() async {
-    await SobrietyService.clear();
+    await SobrietyService.clear(_db);
     state = const AsyncValue.data(null);
   }
 }
@@ -48,7 +52,7 @@ class SobrietyDateNotifier extends StateNotifier<AsyncValue<DateTime?>> {
 
 final sobrietyDateProvider =
     StateNotifierProvider<SobrietyDateNotifier, AsyncValue<DateTime?>>(
-  (ref) => SobrietyDateNotifier(),
+  (ref) => SobrietyDateNotifier(ref.watch(databaseProvider)),
 );
 
 /// Convenience: the current days-sober count derived from [sobrietyDateProvider].

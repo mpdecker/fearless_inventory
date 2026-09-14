@@ -563,6 +563,23 @@ class LiteratureAnnotations extends Table {
 }
 
 // ─────────────────────────────────────────────
+// USER SETTINGS SCHEMA (v17)
+// ─────────────────────────────────────────────
+
+/// Singleton row (id always 0) for small scalar user preferences that belong
+/// in the cloud-synced database — unlike `appSecureStorage`, which holds
+/// genuinely device-local settings (onboarding flags, guest mode, the
+/// native per-device encryption key). Added so the sobriety date survives
+/// a cloud backup/restore instead of being silently left behind.
+class UserSettings extends Table {
+  IntColumn get id => integer()();
+  DateTimeColumn get sobrietyDate => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// ─────────────────────────────────────────────
 // DATABASE CLASS
 // ─────────────────────────────────────────────
 
@@ -598,6 +615,8 @@ class LiteratureAnnotations extends Table {
   RolodexContacts,
   // v16 — Literature highlights & notes
   LiteratureAnnotations,
+  // v17 — User settings (sobriety date)
+  UserSettings,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(String encryptionKey) : super(_openConnection(encryptionKey));
@@ -609,7 +628,7 @@ class AppDatabase extends _$AppDatabase {
       : super(_openConnectionAt(databaseFile, encryptionKey));
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -688,6 +707,11 @@ class AppDatabase extends _$AppDatabase {
           // v15 → v16: literature highlights & notes
           if (from < 16) {
             await m.createTable(literatureAnnotations);
+          }
+          // v16 → v17: user settings (sobriety date, moved out of
+          // appSecureStorage so it's included in cloud backup/restore)
+          if (from < 17) {
+            await m.createTable(userSettings);
           }
         },
       );

@@ -1,37 +1,61 @@
+import 'package:drift/drift.dart' show Value;
+
+import '../database/database.dart';
 import 'app_secure_storage.dart';
 
-/// Persists the user's sobriety date using the same encrypted secure storage
-/// as the onboarding flag and database key.
+/// Persists the user's sobriety date in the cloud-synced Drift database (a
+/// singleton `UserSettings` row) — unlike device-local settings, which stay
+/// in `appSecureStorage`, the sobriety date needs to survive a cloud
+/// backup/restore onto a different device.
 ///
-/// The date is stored as an ISO-8601 date string (YYYY-MM-DD) so it is
-/// timezone-independent — we only care about calendar days, not time.
-///
-/// Storage key is [storageKey]; legacy installs used `sobriety_date_v1`.
+/// Pre-schema-v17 installs stored it in `appSecureStorage` under
+/// [_legacyDeviceKey] (or, before that, [_legacyStorageKey]); the first read
+/// on such an install migrates the value into the database and deletes both
+/// legacy keys.
 class SobrietyService {
-  static const storageKey = 'fearless_sobriety_date';
+  static const _legacyDeviceKey = 'fearless_sobriety_date';
   static const _legacyStorageKey = 'sobriety_date_v1';
+  static const _settingsRowId = 0;
 
   /// Returns the stored sobriety date, or null if not yet set.
-  static Future<DateTime?> getSobrietyDate() async {
-    var val = await appSecureStorage.read(key: storageKey);
-    val ??= await appSecureStorage.read(key: _legacyStorageKey);
-    if (val == null) return null;
-    return DateTime.tryParse(val);
+  static Future<DateTime?> getSobrietyDate(AppDatabase db) async {
+    final row = await (db.select(db.userSettings)
+          ..where((t) => t.id.equals(_settingsRowId)))
+        .getSingleOrNull();
+    if (row?.sobrietyDate != null) return row!.sobrietyDate;
+
+    var legacy = await appSecureStorage.read(key: _legacyDeviceKey);
+    legacy ??= await appSecureStorage.read(key: _legacyStorageKey);
+    if (legacy == null) return null;
+    final parsed = DateTime.tryParse(legacy);
+    if (parsed == null) return null;
+
+    await setSobrietyDate(db, parsed);
+    await appSecureStorage.delete(key: _legacyDeviceKey);
+    await appSecureStorage.delete(key: _legacyStorageKey);
+    return parsed;
   }
 
   /// Persists [date] as the sobriety start date (time component ignored).
-  static Future<void> setSobrietyDate(DateTime date) async {
-    final iso =
-        '${date.year.toString().padLeft(4, '0')}-'
-        '${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')}';
-    await appSecureStorage.write(key: storageKey, value: iso);
-    await appSecureStorage.delete(key: _legacyStorageKey);
+  static Future<void> setSobrietyDate(AppDatabase db, DateTime date) async {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    await db.into(db.userSettings).insertOnConflictUpdate(
+          UserSettingsCompanion.insert(
+            id: const Value(_settingsRowId),
+            sobrietyDate: Value(dateOnly),
+          ),
+        );
   }
 
   /// Removes the stored sobriety date.
-  static Future<void> clear() async {
-    await appSecureStorage.delete(key: storageKey);
+  static Future<void> clear(AppDatabase db) async {
+    await db.into(db.userSettings).insertOnConflictUpdate(
+          const UserSettingsCompanion(
+            id: Value(_settingsRowId),
+            sobrietyDate: Value(null),
+          ),
+        );
+    await appSecureStorage.delete(key: _legacyDeviceKey);
     await appSecureStorage.delete(key: _legacyStorageKey);
   }
 
