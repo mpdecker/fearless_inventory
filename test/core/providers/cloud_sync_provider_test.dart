@@ -66,6 +66,31 @@ void main() {
     verify(() => mockBackup.backup(uid)).called(1);
   });
 
+  test('picks up a user who was already signed in before the notifier was ever built', () async {
+    // Real-world ordering: CloudSyncGate only mounts after sign-in has
+    // already completed (WebPassphraseScreen, email verification, etc. all
+    // happen first), so the sign-in transition is always over by the time
+    // this notifier is first built. `ref.listen` alone only reacts to
+    // *future* changes — it would never see a transition that already
+    // happened. Every other test above signs in only after calling
+    // `container.listen(cloudSyncProvider, ...)`, which builds the notifier
+    // first and therefore doesn't exercise this ordering.
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    final seededAt = DateTime.utc(2026, 1, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => seededAt);
+
+    final first = container.read(firebaseUserProvider.future);
+    authController.add(signedInUser());
+    await first;
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.backup(uid)).called(1);
+  });
+
   test('enters needsReconciliation when the cloud has no local marker but does have a backup', () async {
     final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
     when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);

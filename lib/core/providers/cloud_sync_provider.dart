@@ -93,6 +93,21 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   CloudSyncState build() {
     conn.onLocalDbPersisted = _onLocalWrite;
 
+    // `ref.listen` only fires on a *future* change to firebaseUserProvider —
+    // it does not replay the value already current at registration time. In
+    // real usage this notifier is only ever built once CloudSyncGate mounts,
+    // which is always well after sign-in already completed (WebPassphraseScreen,
+    // email verification, etc. all happen first) — so relying on `ref.listen`
+    // alone meant the sign-in transition had always already happened and this
+    // notifier silently never ran _checkOnSignIn. Read the current value
+    // directly here to cover that already-signed-in-at-build-time case; ref.listen
+    // below still covers later transitions (sign-out, then a different sign-in).
+    final currentUser = ref.read(firebaseUserProvider).valueOrNull;
+    if (currentUser != null) {
+      _uid = currentUser.uid;
+      unawaited(_checkOnSignIn(currentUser.uid));
+    }
+
     ref.listen(firebaseUserProvider, (previous, next) {
       final user = next.valueOrNull;
       _uid = user?.uid;
