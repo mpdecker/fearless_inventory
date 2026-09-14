@@ -69,4 +69,15 @@ abstract class CloudBackupService {
   /// object. The next debounced local write will naturally overwrite the
   /// cloud backup via [backup].
   Future<void> markResolvedKeepingLocal(String uid, DateTime remoteUpdatedAt);
+
+  /// Permanently deletes this account's cloud backup object and this
+  /// device's local sync marker for it. Safe to call even if no backup
+  /// exists. Called when the user deletes their cloud account — deleting
+  /// only the Firebase Auth identity would otherwise leave an encrypted
+  /// copy of their entire local database orphaned in Storage forever
+  /// (unreachable by anyone once the uid is gone, but never removed).
+  /// Callers must call this *before* deleting the Auth user: the security
+  /// rules that authorize this delete require `request.auth.uid == uid`,
+  /// which stops being true the instant the account itself is gone.
+  Future<void> deleteBackup(String uid);
 }

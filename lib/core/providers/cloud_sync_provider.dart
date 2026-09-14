@@ -87,6 +87,7 @@ class CloudSyncState {
 class CloudSyncNotifier extends Notifier<CloudSyncState> {
   Timer? _debounce;
   String? _uid;
+  bool _isChecking = false;
 
   static const _debounceDelay = Duration(seconds: 30);
 
@@ -131,31 +132,47 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   CloudBackupService get _service => ref.read(cloudBackupServiceProvider);
 
   Future<void> _checkOnSignIn(String uid) async {
-    final marker = await _service.readMarker(uid);
-    final remoteUpdatedAt = await _service.remoteBackupUpdatedAt(uid);
+    if (_isChecking) return;
+    _isChecking = true;
+    try {
+      final marker = await _service.readMarker(uid);
+      final remoteUpdatedAt = await _service.remoteBackupUpdatedAt(uid);
 
-    if (_uid != uid) return; // signed out or switched accounts while this check was in flight
+      if (_uid != uid) return; // signed out or switched accounts while this check was in flight
 
-    if (remoteUpdatedAt == null) {
-      // Nothing in the cloud yet for this account — this device's data
-      // becomes the seed.
-      final backedUpAt = await _service.backup(uid);
+      if (remoteUpdatedAt == null) {
+        // Nothing in the cloud yet for this account — this device's data
+        // becomes the seed.
+        final backedUpAt = await _service.backup(uid);
+        state = CloudSyncState(
+          phase: CloudSyncPhase.synced,
+          localBackedUpAt: backedUpAt,
+          remoteUpdatedAt: backedUpAt,
+        );
+        return;
+      }
+
+      final needsReconciliation =
+          marker == null || marker.lastSeenCloudUpdatedAt.isBefore(remoteUpdatedAt);
+
       state = CloudSyncState(
-        phase: CloudSyncPhase.synced,
-        localBackedUpAt: backedUpAt,
-        remoteUpdatedAt: backedUpAt,
+        phase: needsReconciliation ? CloudSyncPhase.needsReconciliation : CloudSyncPhase.synced,
+        localBackedUpAt: marker?.backedUpAt,
+        remoteUpdatedAt: remoteUpdatedAt,
       );
-      return;
+    } catch (_) {
+      // Swallow — matches the spec's "offline / storage rules not deployed
+      // yet: treat as offline, silent retry" requirement. Deliberately do
+      // NOT fall back to `synced`: we don't actually know whether this
+      // account needs reconciliation, and guessing wrong could let a
+      // debounced write silently overwrite a cloud backup this device
+      // never actually reconciled with (violates "never silently overwrite
+      // data"). Instead leave state as-is (still `idle` on the common
+      // first-check-ever-fails case) — _onLocalWrite below re-attempts
+      // this same check on the next local write rather than dead-ending.
+    } finally {
+      _isChecking = false;
     }
-
-    final needsReconciliation =
-        marker == null || marker.lastSeenCloudUpdatedAt.isBefore(remoteUpdatedAt);
-
-    state = CloudSyncState(
-      phase: needsReconciliation ? CloudSyncPhase.needsReconciliation : CloudSyncPhase.synced,
-      localBackedUpAt: marker?.backedUpAt,
-      remoteUpdatedAt: remoteUpdatedAt,
-    );
   }
 
   // Deliberately NOT a trailing-edge debounce (cancel-and-reschedule on every
@@ -168,9 +185,18 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   // _debounceDelay of the *first* write in any burst, no matter how long
   // the burst continues.
   void _onLocalWrite() {
-    if (state.phase != CloudSyncPhase.synced) return;
     final uid = _uid;
     if (uid == null) return;
+    if (state.phase == CloudSyncPhase.idle) {
+      // The sign-in check hasn't completed yet, or a prior attempt failed
+      // and was swallowed (see _checkOnSignIn) — re-attempt it now rather
+      // than silently dropping this write's chance to eventually trigger
+      // a backup. _isChecking (inside _checkOnSignIn) already prevents
+      // piling up concurrent attempts.
+      unawaited(_checkOnSignIn(uid));
+      return;
+    }
+    if (state.phase != CloudSyncPhase.synced) return; // needsReconciliation — wait for the user's choice
     if (_debounce != null) return;
     _debounce = Timer(_debounceDelay, () {
       _debounce = null;
@@ -185,12 +211,19 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   void debugTriggerLocalWrite() => _onLocalWrite();
 
   Future<void> _backupNow(String uid) async {
-    final updatedAt = await _service.backup(uid);
-    state = state.copyWith(
-      phase: CloudSyncPhase.synced,
-      localBackedUpAt: updatedAt,
-      remoteUpdatedAt: updatedAt,
-    );
+    try {
+      final updatedAt = await _service.backup(uid);
+      state = state.copyWith(
+        phase: CloudSyncPhase.synced,
+        localBackedUpAt: updatedAt,
+        remoteUpdatedAt: updatedAt,
+      );
+    } catch (_) {
+      // Swallow — matches the spec's "offline / upload failure: swallow
+      // and let the next debounced write retry" requirement. _debounce is
+      // already null by the time this runs, so the next local write
+      // schedules a fresh attempt.
+    }
   }
 
   // ── Called by the reconciliation dialog ──────────────────────────────────
@@ -209,6 +242,17 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       remoteUpdatedAt: updatedAt,
     );
     ref.read(pageReloadProvider)();
+  }
+
+  /// Re-runs the sign-in check against the cloud — per the design spec,
+  /// called whenever the Account screen is opened while signed in, so a
+  /// newer backup from another device ("occasionally opening the laptop")
+  /// is detected without requiring a full page reload. A no-op while
+  /// signed out or while a check is already in flight ([_isChecking]).
+  Future<void> recheck() async {
+    final uid = _uid;
+    if (uid == null) return;
+    await _checkOnSignIn(uid);
   }
 
   Future<void> keepLocalData() async {

@@ -319,6 +319,98 @@ void main() {
     });
   });
 
+  test(
+      'a failed sign-in check swallows the error and retries on the next local write',
+      () async {
+    var callCount = 0;
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async {
+      callCount++;
+      if (callCount == 1) throw Exception('transient network error');
+      return null;
+    });
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => DateTime.utc(2026, 1, 1));
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    // The first check failed and was swallowed (spec: "swallow and let the
+    // next debounced write retry") — state stays idle rather than crashing
+    // or guessing, and no backup was attempted against unknown state.
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+    verifyNever(() => mockBackup.backup(uid));
+
+    // A local write while idle re-attempts the check instead of being
+    // silently dropped forever — this time it succeeds.
+    container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.readMarker(uid)).called(2);
+  });
+
+  test('a failed debounced backup is swallowed and can be retried by the next write',
+      () {
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+    var backupCalls = 0;
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async {
+      backupCalls++;
+      if (backupCalls == 1) throw Exception('upload failed');
+      return DateTime.utc(2026, 3, 1);
+    });
+
+    fakeAsync((async) {
+      container.listen(cloudSyncProvider, (_, __) {});
+      authController.add(signedInUser());
+      async.flushMicrotasks();
+      expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+
+      container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+      async.elapse(const Duration(seconds: 30));
+
+      // The failure was swallowed (spec: "offline / upload failure:
+      // swallow and let the next debounced write retry") — state is still
+      // synced, not corrupted, and _debounce was already cleared so a
+      // second write can try again.
+      expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+      expect(backupCalls, 1);
+
+      container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+      async.elapse(const Duration(seconds: 30));
+
+      expect(backupCalls, 2);
+      expect(container.read(cloudSyncProvider).localBackedUpAt, DateTime.utc(2026, 3, 1));
+    });
+  });
+
+  test('recheck() re-runs the sign-in check, detecting a newer cloud backup',
+      () async {
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    final seededAt = DateTime.utc(2026, 1, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => seededAt);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+
+    // Simulate another device having backed up something newer since —
+    // this is what AccountScreen's recheck() call (on screen open) is
+    // meant to detect without requiring a full page reload.
+    final newerRemote = DateTime.utc(2026, 3, 1);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => newerRemote);
+
+    await container.read(cloudSyncProvider.notifier).recheck();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+    expect(container.read(cloudSyncProvider).remoteUpdatedAt, newerRemote);
+  });
+
   test('keepLocalData records the resolution and transitions to synced', () async {
     final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
     when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);

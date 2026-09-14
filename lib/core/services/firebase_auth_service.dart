@@ -11,8 +11,10 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Wraps Firebase Authentication with email/password, Google, and Apple
-/// sign-in.  All data stays on-device — Firebase is used only for
-/// identity management, not for storing recovery content.
+/// sign-in. On native, all data stays on-device — Firebase is used only for
+/// identity management. On web, signing in also enables an optional
+/// encrypted cloud backup of the local database (see `cloud_sync_provider.dart`);
+/// this service itself never touches recovery content either way.
 ///
 /// Callers receive [FirebaseAuthException] on failure; use [errorMessage] to
 /// convert codes into user-friendly strings before displaying them.

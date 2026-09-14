@@ -87,7 +87,20 @@ class WebCloudBackupService implements CloudBackupService {
     await decryptBytes(key, decoded.iv, decoded.ciphertext);
 
     await saveDbEnvelope(decoded.salt, decoded.iv, decoded.ciphertext);
-    final updatedAt = await remoteBackupUpdatedAt(uid) ?? DateTime.now().toUtc();
+    // The restore itself already succeeded (decrypt above proved the
+    // passphrase and the local envelope is already overwritten) — a
+    // failure fetching the exact server timestamp here is a nicety, not a
+    // reason to report the whole restore as failed (or, worse, let this
+    // exception reach the dialog's generic catch and be shown as "wrong
+    // passphrase," the exact conflation CloudBackupUnreachable exists to
+    // prevent). Fall back to "now" and still write the marker + return
+    // normally so the caller proceeds to reload the page.
+    DateTime updatedAt;
+    try {
+      updatedAt = await remoteBackupUpdatedAt(uid) ?? DateTime.now().toUtc();
+    } catch (_) {
+      updatedAt = DateTime.now().toUtc();
+    }
     await _writeMarker(
       uid,
       CloudSyncMarker(backedUpAt: updatedAt, lastSeenCloudUpdatedAt: updatedAt),
@@ -124,4 +137,14 @@ class WebCloudBackupService implements CloudBackupService {
         value:
             '${marker.backedUpAt.toIso8601String()}|${marker.lastSeenCloudUpdatedAt.toIso8601String()}',
       );
+
+  @override
+  Future<void> deleteBackup(String uid) async {
+    try {
+      await _ref(uid).delete();
+    } on FirebaseException catch (e) {
+      if (e.code != 'object-not-found') rethrow;
+    }
+    await _secureStorage.delete(key: '$_markerKeyPrefix$uid');
+  }
 }

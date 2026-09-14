@@ -43,3 +43,37 @@ Flutter release build + store submission (see docs/LAUNCH_CHECKLIST.md if presen
 ## Rollback
 
 Redeploy the previous host build (Vercel promotion rollback, EAS prior build, or Docker image tag).
+
+## Web build (Cloudflare + Firebase)
+
+The web build is deployed to Cloudflare Workers static assets and talks to
+Firebase (Auth + Storage) for the optional cloud backup/restore feature.
+
+```bash
+flutter build web --release --pwa-strategy=none
+npx wrangler deploy
+```
+
+Firebase Storage security rules (`storage.rules`) and the CORS policy
+(`cors.json`) are separate from the Wrangler deploy above and must be
+applied to the Firebase project directly — neither is picked up
+automatically by `wrangler deploy` or by editing the files in this repo:
+
+```bash
+npx firebase-tools deploy --only storage --project fearless-inventory
+gcloud storage buckets update gs://fearless-inventory.firebasestorage.app --cors-file=cors.json
+```
+
+**Why CORS matters:** without it, the browser's `getData()` call used by
+*restore* fails with a CORS error that the app cannot distinguish from
+"wrong passphrase" — backup (upload) and the "does a backup exist" check
+use different Storage sub-resources and keep working even when restore is
+completely broken by a missing/wrong CORS policy. If restore starts
+failing for everyone after a bucket change, check this first.
+
+If `gcloud` isn't installed, the same policy can be applied via the GCS
+JSON API (`PATCH https://storage.googleapis.com/storage/v1/b/<bucket>`
+with `{"cors": [...]}` from `cors.json`) using any OAuth token with
+`storage.buckets.update` on the project — for example the token already
+held by an authenticated `firebase-tools` CLI session
+(`~/.config/configstore/firebase-tools.json`).

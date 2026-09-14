@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,10 +35,17 @@ class WelcomeAuthScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Create a free account to keep your sign-in across devices, or '
-                'continue right here on this device. Either way, your recovery '
-                'journal and inventory stay encrypted on this device — we never '
-                'upload your step work to our servers.',
+                kIsWeb
+                    ? 'Create a free account to keep your sign-in across devices, '
+                        'or continue right here on this device. Either way, your '
+                        'recovery journal and inventory stay encrypted. With an '
+                        'account, an encrypted backup lets you pick up on another '
+                        'device or browser — protected by a passphrase only you '
+                        'know; we cannot read it.'
+                    : 'Create a free account to keep your sign-in across devices, '
+                        'or continue right here on this device. Either way, your '
+                        'recovery journal and inventory stay encrypted on this '
+                        'device — we never upload your step work to our servers.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.65),
