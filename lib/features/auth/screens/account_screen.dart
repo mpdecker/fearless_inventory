@@ -367,13 +367,31 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
   /// in Storage forever, unreachable but never removed.
   Future<void> _deleteAccountAndBackup(String uid) async {
     if (kIsWeb) {
-      try {
-        await ref.read(cloudBackupServiceProvider).deleteBackup(uid);
-      } catch (_) {
-        // Best-effort — proceed to delete the account regardless.
-      }
+      await _deleteBackupBestEffort(uid);
     }
     await ref.read(firebaseAuthServiceProvider).deleteAccount();
+  }
+
+  /// Retries a transient failure (network blip, brief Storage delay) a
+  /// couple of times before giving up. Still best-effort overall — even a
+  /// final failure here must not block the account deletion — but a single
+  /// attempt gave transient failures no second chance, and unlike the
+  /// backup/reconciliation paths elsewhere in this feature (which get
+  /// retried on the next local write or the next Account-screen visit),
+  /// there is no later opportunity to retry a delete: once the Firebase
+  /// identity is gone, no one can ever authenticate as this uid again, so
+  /// the orphaned object becomes permanently unreachable and unremovable.
+  Future<void> _deleteBackupBestEffort(String uid) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        await ref.read(cloudBackupServiceProvider).deleteBackup(uid);
+        return;
+      } catch (_) {
+        if (attempt < 2) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
+    }
   }
 
   Future<void> _deleteAfterPasswordReauth(User user) async {
