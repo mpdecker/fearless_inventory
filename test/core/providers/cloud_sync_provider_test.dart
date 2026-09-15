@@ -1,0 +1,430 @@
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:fearless_inventory/core/providers/auth_provider.dart';
+import 'package:fearless_inventory/core/providers/cloud_sync_provider.dart';
+import 'package:fearless_inventory/core/services/cloud_backup_service.dart';
+import 'package:fearless_inventory/core/services/firebase_auth_service.dart';
+
+class MockCloudBackupService extends Mock implements CloudBackupService {}
+
+class MockFirebaseAuthService extends Mock implements FirebaseAuthService {}
+
+class MockUser extends Mock implements User {}
+
+void main() {
+  late StreamController<User?> authController;
+  late MockFirebaseAuthService mockAuth;
+  late MockCloudBackupService mockBackup;
+  late ProviderContainer container;
+
+  const uid = 'test-uid';
+
+  setUp(() {
+    authController = StreamController<User?>.broadcast();
+    mockAuth = MockFirebaseAuthService();
+    when(() => mockAuth.userChanges).thenAnswer((_) => authController.stream);
+    mockBackup = MockCloudBackupService();
+
+    container = ProviderContainer(
+      overrides: [
+        firebaseAuthServiceProvider.overrideWithValue(mockAuth),
+        cloudBackupServiceProvider.overrideWithValue(mockBackup),
+        pageReloadProvider.overrideWithValue(() {}),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(authController.close);
+  });
+
+  MockUser signedInUser() {
+    final user = MockUser();
+    when(() => user.uid).thenReturn(uid);
+    return user;
+  }
+
+  test('starts idle before any sign-in', () {
+    final state = container.read(cloudSyncProvider);
+    expect(state.phase, CloudSyncPhase.idle);
+  });
+
+  test('seeds a backup and becomes synced when no remote backup exists yet', () async {
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    final seededAt = DateTime.utc(2026, 1, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => seededAt);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.backup(uid)).called(1);
+  });
+
+  test('picks up a user who was already signed in before the notifier was ever built', () async {
+    // Real-world ordering: CloudSyncGate only mounts after sign-in has
+    // already completed (WebPassphraseScreen, email verification, etc. all
+    // happen first), so the sign-in transition is always over by the time
+    // this notifier is first built. `ref.listen` alone only reacts to
+    // *future* changes — it would never see a transition that already
+    // happened. Every other test above signs in only after calling
+    // `container.listen(cloudSyncProvider, ...)`, which builds the notifier
+    // first and therefore doesn't exercise this ordering.
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    final seededAt = DateTime.utc(2026, 1, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => seededAt);
+
+    final first = container.read(firebaseUserProvider.future);
+    authController.add(signedInUser());
+    await first;
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.backup(uid)).called(1);
+  });
+
+  test('enters needsReconciliation when the cloud has no local marker but does have a backup', () async {
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    final state = container.read(cloudSyncProvider);
+    expect(state.phase, CloudSyncPhase.needsReconciliation);
+    expect(state.remoteUpdatedAt, remoteUpdatedAt);
+    verifyNever(() => mockBackup.backup(uid));
+  });
+
+  test('enters needsReconciliation when the cloud is newer than this device\'s marker', () async {
+    final localMarker = CloudSyncMarker(
+      backedUpAt: DateTime.utc(2026, 1, 1),
+      lastSeenCloudUpdatedAt: DateTime.utc(2026, 1, 1),
+    );
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1); // newer
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+  });
+
+  test('goes straight to synced when this device\'s marker already matches the cloud', () async {
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verifyNever(() => mockBackup.backup(uid));
+  });
+
+  test('resets to idle on sign-out', () async {
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => DateTime.utc(2026, 1, 1));
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+
+    authController.add(null);
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+  });
+
+  test('does not overwrite state or call backup for a stale sign-in check after sign-out', () async {
+    final markerCompleter = Completer<CloudSyncMarker?>();
+    final remoteCompleter = Completer<DateTime?>();
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) => markerCompleter.future);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) => remoteCompleter.future);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    // Sign out while the check is still in flight.
+    authController.add(null);
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+
+    // Now let the stale check's futures resolve as the seed-backup path
+    // (no remote backup yet) — this is the branch that would otherwise
+    // call `_service.backup(uid)` for the now-signed-out account.
+    markerCompleter.complete(null);
+    remoteCompleter.complete(null);
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+    verifyNever(() => mockBackup.backup(uid));
+  });
+
+  test('useCloudBackup restores and transitions to synced', () async {
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+    when(() => mockBackup.restoreVerifyingPassphrase(uid, 'correct-passphrase'))
+        .thenAnswer((_) async => remoteUpdatedAt);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+
+    await container.read(cloudSyncProvider.notifier).useCloudBackup('correct-passphrase');
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.restoreVerifyingPassphrase(uid, 'correct-passphrase')).called(1);
+  });
+
+  test('useCloudBackup with a wrong passphrase propagates the error and stays in needsReconciliation', () async {
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+    when(() => mockBackup.restoreVerifyingPassphrase(uid, 'wrong'))
+        .thenThrow(Exception('bad passphrase'));
+
+    var reloadCalled = false;
+    final localContainer = ProviderContainer(
+      overrides: [
+        firebaseAuthServiceProvider.overrideWithValue(mockAuth),
+        cloudBackupServiceProvider.overrideWithValue(mockBackup),
+        pageReloadProvider.overrideWithValue(() => reloadCalled = true),
+      ],
+    );
+    addTearDown(localContainer.dispose);
+
+    localContainer.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    await expectLater(
+      localContainer.read(cloudSyncProvider.notifier).useCloudBackup('wrong'),
+      throwsException,
+    );
+    expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+    expect(reloadCalled, isFalse);
+  });
+
+  test('useCloudBackup reloads the page exactly once after a successful restore', () async {
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+    when(() => mockBackup.restoreVerifyingPassphrase(uid, 'correct-passphrase'))
+        .thenAnswer((_) async => remoteUpdatedAt);
+
+    var reloadCount = 0;
+    final localContainer = ProviderContainer(
+      overrides: [
+        firebaseAuthServiceProvider.overrideWithValue(mockAuth),
+        cloudBackupServiceProvider.overrideWithValue(mockBackup),
+        pageReloadProvider.overrideWithValue(() => reloadCount++),
+      ],
+    );
+    addTearDown(localContainer.dispose);
+
+    localContainer.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+    expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+
+    await localContainer.read(cloudSyncProvider.notifier).useCloudBackup('correct-passphrase');
+
+    expect(localContainer.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    expect(reloadCount, 1);
+  });
+
+  test('a local write triggers a backup after the debounce delay, not immediately', () {
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+    final backedUpAt = DateTime.utc(2026, 3, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => backedUpAt);
+
+    fakeAsync((async) {
+      container.listen(cloudSyncProvider, (_, __) {});
+      authController.add(signedInUser());
+      async.flushMicrotasks();
+      expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+      verifyNever(() => mockBackup.backup(uid));
+
+      container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+      async.elapse(const Duration(seconds: 29));
+      verifyNever(() => mockBackup.backup(uid));
+
+      async.elapse(const Duration(seconds: 2)); // crosses the 30s debounce delay
+      verify(() => mockBackup.backup(uid)).called(1);
+      expect(container.read(cloudSyncProvider).localBackedUpAt, backedUpAt);
+    });
+  });
+
+  test('a continuous burst of local writes does not starve the debounced backup', () {
+    // Regression test: a trailing-edge debounce (cancel + reschedule on
+    // every write) never lets 30 quiet seconds elapse under a sustained
+    // burst — e.g. the meeting-finder sync writing a sync-metadata row for
+    // each of its ~15 sources over the first couple of minutes after
+    // sign-in — so the cloud backup would never fire for as long as the
+    // burst continues. The fix only schedules when no timer is already
+    // pending, guaranteeing progress within _debounceDelay of the first
+    // write in the burst.
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+    var backupCallCount = 0;
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async {
+      backupCallCount++;
+      return DateTime.utc(2026, 3, 1);
+    });
+
+    fakeAsync((async) {
+      container.listen(cloudSyncProvider, (_, __) {});
+      authController.add(signedInUser());
+      async.flushMicrotasks();
+
+      final notifier = container.read(cloudSyncProvider.notifier);
+      // A write every 5s for 2 minutes straight — continuously shorter than
+      // the 30s debounce delay, so a trailing-edge debounce never quiets.
+      for (var i = 0; i < 24; i++) {
+        notifier.debugTriggerLocalWrite();
+        async.elapse(const Duration(seconds: 5));
+      }
+
+      expect(
+        backupCallCount,
+        greaterThan(0),
+        reason: 'backup() was never called during a 120s continuous write burst — '
+            'the debounce was starved instead of throttling',
+      );
+    });
+  });
+
+  test(
+      'a failed sign-in check swallows the error and retries on the next local write',
+      () async {
+    var callCount = 0;
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async {
+      callCount++;
+      if (callCount == 1) throw Exception('transient network error');
+      return null;
+    });
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => DateTime.utc(2026, 1, 1));
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    // The first check failed and was swallowed (spec: "swallow and let the
+    // next debounced write retry") — state stays idle rather than crashing
+    // or guessing, and no backup was attempted against unknown state.
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.idle);
+    verifyNever(() => mockBackup.backup(uid));
+
+    // A local write while idle re-attempts the check instead of being
+    // silently dropped forever — this time it succeeds.
+    container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+    await pumpEventQueue();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.readMarker(uid)).called(2);
+  });
+
+  test('a failed debounced backup is swallowed and can be retried by the next write',
+      () {
+    final sameTime = DateTime.utc(2026, 1, 1);
+    final localMarker = CloudSyncMarker(backedUpAt: sameTime, lastSeenCloudUpdatedAt: sameTime);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => localMarker);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => sameTime);
+    var backupCalls = 0;
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async {
+      backupCalls++;
+      if (backupCalls == 1) throw Exception('upload failed');
+      return DateTime.utc(2026, 3, 1);
+    });
+
+    fakeAsync((async) {
+      container.listen(cloudSyncProvider, (_, __) {});
+      authController.add(signedInUser());
+      async.flushMicrotasks();
+      expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+
+      container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+      async.elapse(const Duration(seconds: 30));
+
+      // The failure was swallowed (spec: "offline / upload failure:
+      // swallow and let the next debounced write retry") — state is still
+      // synced, not corrupted, and _debounce was already cleared so a
+      // second write can try again.
+      expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+      expect(backupCalls, 1);
+
+      container.read(cloudSyncProvider.notifier).debugTriggerLocalWrite();
+      async.elapse(const Duration(seconds: 30));
+
+      expect(backupCalls, 2);
+      expect(container.read(cloudSyncProvider).localBackedUpAt, DateTime.utc(2026, 3, 1));
+    });
+  });
+
+  test('recheck() re-runs the sign-in check, detecting a newer cloud backup',
+      () async {
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => null);
+    final seededAt = DateTime.utc(2026, 1, 1);
+    when(() => mockBackup.backup(uid)).thenAnswer((_) async => seededAt);
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+
+    // Simulate another device having backed up something newer since —
+    // this is what AccountScreen's recheck() call (on screen open) is
+    // meant to detect without requiring a full page reload.
+    final newerRemote = DateTime.utc(2026, 3, 1);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => newerRemote);
+
+    await container.read(cloudSyncProvider.notifier).recheck();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.needsReconciliation);
+    expect(container.read(cloudSyncProvider).remoteUpdatedAt, newerRemote);
+  });
+
+  test('keepLocalData records the resolution and transitions to synced', () async {
+    final remoteUpdatedAt = DateTime.utc(2026, 2, 1);
+    when(() => mockBackup.readMarker(uid)).thenAnswer((_) async => null);
+    when(() => mockBackup.remoteBackupUpdatedAt(uid)).thenAnswer((_) async => remoteUpdatedAt);
+    when(() => mockBackup.markResolvedKeepingLocal(uid, remoteUpdatedAt))
+        .thenAnswer((_) async {});
+
+    container.listen(cloudSyncProvider, (_, __) {});
+    authController.add(signedInUser());
+    await pumpEventQueue();
+
+    await container.read(cloudSyncProvider.notifier).keepLocalData();
+
+    expect(container.read(cloudSyncProvider).phase, CloudSyncPhase.synced);
+    verify(() => mockBackup.markResolvedKeepingLocal(uid, remoteUpdatedAt)).called(1);
+  });
+}

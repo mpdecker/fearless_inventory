@@ -8,7 +8,7 @@
 library;
 
 /// Human-readable date this policy last changed. Bump when the text changes.
-const String kPrivacyPolicyLastUpdated = 'July 27, 2026';
+const String kPrivacyPolicyLastUpdated = 'September 14, 2026';
 
 /// Publicly hosted copy, used on the store listings.
 ///
@@ -31,9 +31,14 @@ const List<PolicySection> kPrivacyPolicySections = [
     [
       'Fearless Inventory is built so your recovery work stays yours. Your '
           'inventory, daily reviews, amends, journal entries, literature '
-          'highlights and notes, meditation history, sponsee records, and '
-          'contacts are stored only on this device, in an encrypted database. '
-          'We cannot read them. They are never uploaded to us.',
+          'highlights and notes, meditation history, sponsee records, '
+          'contacts, and sobriety date are stored in an encrypted database on '
+          'this device. We cannot read them.',
+      'On the web version only, if you create an account, an encrypted copy '
+          'of that same database may be backed up so you can restore it on '
+          'another device. It is protected by a passphrase only you know — we '
+          'cannot decrypt it. See "Optional account" below for what that '
+          'means and how to avoid it.',
       'We do not use analytics, advertising, or tracking of any kind. We do '
           'not sell or share your information.',
     ],
@@ -41,15 +46,15 @@ const List<PolicySection> kPrivacyPolicySections = [
   PolicySection(
     'What stays on your device',
     [
-      'All recovery content you enter is written to a local database that is '
-          'encrypted on your device (SQLCipher). This includes Step 4 '
-          'resentments, fears, and harms; Step 10 daily reviews; Step 8/9 '
-          'amends; journal entries; literature highlights and notes; '
-          'meditation sessions; service commitments; sponsee and Rolodex '
-          'records; and meeting attendance.',
-      'Your sobriety date and your app-lock PIN are held in your device\'s '
-          'secure storage (iOS Keychain / Android encrypted storage). The PIN '
-          'is stored as a hash, not as the digits you type.',
+      'All recovery content you enter — Step 4 resentments, fears, and '
+          'harms; Step 10 daily reviews; Step 8/9 amends; journal entries; '
+          'literature highlights and notes; meditation sessions; service '
+          'commitments; sponsee and Rolodex records; meeting attendance; and '
+          'your sobriety date — is written to a local database encrypted on '
+          'your device (SQLCipher).',
+      'Your app-lock PIN is held separately, in your device\'s secure storage '
+          '(iOS Keychain / Android encrypted storage), as a hash — not as the '
+          'digits you type.',
       'If you import contacts into your Rolodex, those names and numbers are '
           'copied into the same local encrypted database. They are not sent '
           'anywhere.',
@@ -61,13 +66,26 @@ const List<PolicySection> kPrivacyPolicySections = [
       'You can use the entire app without an account by choosing "Continue '
           'without an account". In that mode we hold no information about you '
           'at all.',
-      'If you do create an account, it exists only to sign you in. It is '
-          'handled by Google Firebase Authentication, which receives your '
-          'email address and, depending on the method you choose, an '
-          'identifier from Google or Apple Sign-In. Your recovery content is '
-          'never attached to that account or uploaded.',
-      'You can delete your account at any time from Settings → Account. You '
-          'can erase all local recovery data from Settings → Clear All Data.',
+      'If you do create an account, it is handled by Google Firebase '
+          'Authentication, which receives your email address and, depending '
+          'on the method you choose, an identifier from Google or Apple '
+          'Sign-In.',
+      'On the mobile apps (iOS/Android), an account exists only to sign you '
+          'in — your recovery content is never attached to it or uploaded, '
+          'exactly as described above.',
+      'On the web version, signing in additionally backs up an encrypted '
+          'copy of your local database to our server so you can restore it on '
+          'another device or browser. We never see the unencrypted content: '
+          'it is encrypted on your device (AES-256-GCM) with a key derived '
+          'from a passphrase you choose, before it ever leaves your browser, '
+          'using the same encryption that protects the local database. We do '
+          'not know your passphrase and cannot recover it or decrypt your '
+          'backup if you forget it. If a browser session detects a backup '
+          'that differs from what is on that device, it asks you which '
+          'version to keep before changing anything.',
+      'You can delete your account at any time from Settings → Account, '
+          'which also deletes any cloud backup. You can erase all local '
+          'recovery data from Settings → Clear All Data.',
     ],
   ),
   PolicySection(

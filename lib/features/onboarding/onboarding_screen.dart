@@ -81,8 +81,8 @@ const _pages = [
         'Use this tool with a sponsor. Stay in the middle of the herd. '
         'The promises are real.\n\n'
         'To use the app you will create a free account next. That account is '
-        'only for sign-in and security — your inventory, journal, and step '
-        'work stay encrypted on this device and are not uploaded to our servers.',
+        'only for sign-in and security. Your inventory, journal, and step '
+        'work stay encrypted, and only you hold the key to read them.',
     icon: Icons.shield_outlined,
     color: AppColors.accentDeepGreen,
     quote: RecoveryQuotes.promises,

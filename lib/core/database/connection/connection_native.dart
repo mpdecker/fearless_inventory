@@ -45,3 +45,8 @@ QueryExecutor openConnection(String encryptionKey) {
 
 /// The web-only passphrase gate never runs on native.
 Future<bool> webDatabaseExists() async => false;
+
+/// Web-only in practice — see connection_web.dart. Declared here too so
+/// code that references it (via the conditional import) compiles on every
+/// platform; never actually called outside web.
+void Function()? onLocalDbPersisted;

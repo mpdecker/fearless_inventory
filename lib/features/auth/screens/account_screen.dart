@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/cloud_sync_provider.dart';
 import '../../../core/services/firebase_auth_service.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -81,14 +83,23 @@ class _SignedOutView extends StatelessWidget {
               children: [
                 _PrivacyPoint(
                   icon: Icons.lock_outline,
-                  text: 'Your recovery data is encrypted on this device and '
-                      'never uploaded to any server.',
+                  text: kIsWeb
+                      ? 'Your recovery data is encrypted on this device. With '
+                          'an account, an encrypted backup lets you restore it '
+                          'on another device — protected by a passphrase only '
+                          'you know.'
+                      : 'Your recovery data is encrypted on this device and '
+                          'never uploaded to any server.',
                 ),
                 const SizedBox(height: 10),
                 _PrivacyPoint(
                   icon: Icons.account_circle_outlined,
-                  text: 'Your account is for sign-in and security. '
-                      'Recovery content is not uploaded to our servers.',
+                  text: kIsWeb
+                      ? 'Your account is for sign-in and, on the web, an '
+                          'optional encrypted backup. We cannot read your '
+                          'recovery content.'
+                      : 'Your account is for sign-in and security. '
+                          'Recovery content is not uploaded to our servers.',
                 ),
                 const SizedBox(height: 10),
                 _PrivacyPoint(
@@ -151,6 +162,22 @@ class _SignedInView extends ConsumerStatefulWidget {
 class _SignedInViewState extends ConsumerState<_SignedInView> {
   bool _isSendingVerification = false;
   bool _isSigningOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Re-check against the cloud whenever this screen opens — per the
+    // design spec, this is one of the two points (the other is sign-in)
+    // where a newer backup from another device should be detected and
+    // surface the reconciliation dialog, without requiring a full page
+    // reload. CloudSyncGate wraps the app root and stays mounted
+    // underneath this pushed route, so its existing `ref.listen` already
+    // reacts correctly to the state transition this triggers.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(cloudSyncProvider.notifier).recheck();
+    });
+  }
 
   Future<void> _resendVerification() async {
     setState(() => _isSendingVerification = true);
@@ -330,6 +357,25 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
         ),
       );
 
+  /// Deletes the cloud backup (web only — `cloudBackupServiceProvider`
+  /// throws on native, where cloud sync never runs) before deleting the
+  /// Firebase Auth account itself. Order matters: the Storage security
+  /// rules that authorize this delete require `request.auth.uid == uid`,
+  /// which stops being true the instant the account is gone. Best-effort —
+  /// a Storage failure must not block the account deletion the user asked
+  /// for; without this, the encrypted backup would otherwise be orphaned
+  /// in Storage forever, unreachable but never removed.
+  Future<void> _deleteAccountAndBackup(String uid) async {
+    if (kIsWeb) {
+      try {
+        await ref.read(cloudBackupServiceProvider).deleteBackup(uid);
+      } catch (_) {
+        // Best-effort — proceed to delete the account regardless.
+      }
+    }
+    await ref.read(firebaseAuthServiceProvider).deleteAccount();
+  }
+
   Future<void> _deleteAfterPasswordReauth(User user) async {
     final email = user.email;
     if (email == null || email.isEmpty) {
@@ -356,7 +402,7 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
             email: email,
             password: password,
           );
-      await ref.read(firebaseAuthServiceProvider).deleteAccount();
+      await _deleteAccountAndBackup(user.uid);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account deleted.')),
@@ -390,7 +436,7 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
       } else {
         return;
       }
-      await service.deleteAccount();
+      await _deleteAccountAndBackup(user.uid);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account deleted.')),
@@ -416,7 +462,7 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
 
   Future<void> _deleteAccount() async {
     try {
-      await ref.read(firebaseAuthServiceProvider).deleteAccount();
+      await _deleteAccountAndBackup(widget.user.uid);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account deleted.')),
@@ -552,6 +598,27 @@ class _SignedInViewState extends ConsumerState<_SignedInView> {
           const SizedBox(height: 4),
         ],
 
+        // ── Cloud backup status ─────────────────────────────────────────
+        Builder(builder: (context) {
+          final syncState = ref.watch(cloudSyncProvider);
+          final label = switch (syncState.phase) {
+            CloudSyncPhase.synced when syncState.localBackedUpAt != null =>
+              'Last backed up: ${_formatRelative(syncState.localBackedUpAt!)}',
+            CloudSyncPhase.needsReconciliation => 'Backup needs your attention',
+            _ => 'Not backed up yet',
+          };
+          return Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_done_outlined, color: Colors.white54, size: 16),
+                const SizedBox(width: 8),
+                Text(label, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+              ],
+            ),
+          );
+        }),
+
         const Divider(height: 32, color: Colors.white12),
 
         // ── Sign out ──────────────────────────────────────────────────────
@@ -679,4 +746,12 @@ class _ProviderChip extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatRelative(DateTime dt) {
+  final diff = DateTime.now().toUtc().difference(dt.toUtc());
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
 }

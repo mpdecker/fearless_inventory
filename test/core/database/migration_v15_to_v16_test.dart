@@ -51,7 +51,10 @@ void main() {
         .customSelect('PRAGMA user_version')
         .map((r) => r.read<int>('user_version'))
         .getSingle();
-    expect(version, 16, reason: 'schema should be upgraded to v16');
+    // Reopening after the v15 rewind runs every onUpgrade step in one shot,
+    // landing on the current schema version (not literally 16) — this test
+    // still specifically validates the 15→16 step (literature_annotations).
+    expect(version, 17, reason: 'schema should be upgraded to the current version');
 
     // Pre-existing data survived the upgrade.
     final bookmarks = await migrated.select(migrated.literatureBookmarks).get();

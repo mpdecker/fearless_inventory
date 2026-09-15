@@ -93,7 +93,7 @@ class SeedDataService {
         );
 
     // ── 1. Sobriety date — 548 days (18 months) ago ──────────────────────────
-    await SobrietyService.setSobrietyDate(today.subtract(const Duration(days: 548)));
+    await SobrietyService.setSobrietyDate(_db, today.subtract(const Duration(days: 548)));
 
     // ── 2. Sync meta — meeting sources ───────────────────────────────────────
     await _db.into(_db.syncMetas).insertOnConflictUpdate(SyncMetasCompanion.insert(

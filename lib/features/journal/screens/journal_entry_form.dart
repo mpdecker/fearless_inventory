@@ -179,7 +179,7 @@ class JournalEntryForm extends HookConsumerWidget {
 
             const SizedBox(height: 8),
             Text(
-              'Your journal is stored only on this device and is encrypted.',
+              'Your journal stays encrypted, and only you hold the key to read it.',
               style: TextStyle(
                 fontSize: 11,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),

@@ -11,6 +11,7 @@ import '../../features/auth/screens/app_lock_screen.dart';
 import '../../features/auth/screens/email_verification_screen.dart';
 import '../../features/auth/screens/pin_setup_screen.dart';
 import '../../features/auth/screens/welcome_auth_screen.dart';
+import '../../features/auth/widgets/cloud_sync_gate.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 
@@ -76,7 +77,7 @@ class BootstrapShell extends ConsumerWidget {
             // biometric are a native-only second layer on top of the
             // OS-keystore-backed encryption key; skip straight to HomeScreen.
             if (kIsWeb) {
-              return const HomeScreen();
+              return const CloudSyncGate(child: HomeScreen());
             }
 
             final lockState = ref.watch(appLockProvider);
