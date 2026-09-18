@@ -83,7 +83,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -150,7 +150,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                       )
                     : const Text('Resend verification email'),
               ),
-              const Spacer(),
+              const SizedBox(height: 40),
               TextButton(
                 onPressed: _isSigningOut ? null : _signOut,
                 child: _isSigningOut

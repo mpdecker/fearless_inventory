@@ -199,7 +199,7 @@ class _TabIntroSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(28, 16, 28, bottomPadding + 28),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -269,7 +269,7 @@ class _TabIntroSheet extends StatelessWidget {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
