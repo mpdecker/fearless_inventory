@@ -197,6 +197,21 @@ void main() {
       verify(() => mockGoogleSignIn.signOut()).called(1);
       verify(() => mockAuth.signOut()).called(1);
     });
+
+    test('completes and still signs out of Firebase when Google signOut throws',
+        () async {
+      // Regression test: on web, GoogleSignIn.signOut() can throw (or hang)
+      // when no Google OAuth client is configured, even for a user who
+      // signed in with email/password. That must never block or fail the
+      // real Firebase sign-out.
+      when(() => mockGoogleSignIn.signOut())
+          .thenThrow(Exception('Google Sign-In not initialized'));
+      when(() => mockAuth.signOut()).thenAnswer((_) async {});
+
+      await sut.signOut();
+
+      verify(() => mockAuth.signOut()).called(1);
+    });
   });
 
   // ── signInWithGoogle ───────────────────────────────────────────────────────
