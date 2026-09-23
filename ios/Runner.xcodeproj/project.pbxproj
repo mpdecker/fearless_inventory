@@ -535,7 +535,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.fearlessinventory.fearless_inventory;
+				PRODUCT_BUNDLE_IDENTIFIER = com.drownedwoods.fearlessinventory;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Happy Destiny Dev Profile";
@@ -730,7 +730,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.fearlessinventory.fearless_inventory;
+				PRODUCT_BUNDLE_IDENTIFIER = com.drownedwoods.fearlessinventory;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Happy Destiny Dev Profile";
@@ -761,7 +761,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.fearlessinventory.fearless_inventory;
+				PRODUCT_BUNDLE_IDENTIFIER = com.drownedwoods.fearlessinventory;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Happy Destiny Dev Profile";
