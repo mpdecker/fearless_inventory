@@ -246,9 +246,20 @@ class FirebaseAuthService {
   // ── Account management ─────────────────────────────────────────────────────
 
   /// Sign out from Firebase and revoke the Google token if applicable.
+  ///
+  /// The Firebase sign-out runs first and unconditionally: [GoogleSignIn]
+  /// tries to talk to Google's identity SDK even for a user who never used
+  /// Google sign-in, and on web that call can hang indefinitely when no
+  /// Google OAuth client is configured (see [kGoogleSignInEnabled]). Best-effort
+  /// token revocation must never be able to block — or, if it throws instead
+  /// of hanging, silently swallow — the real sign-out.
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
     await _auth.signOut();
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {
+      // Best-effort only; the user is already signed out of Firebase above.
+    }
   }
 
   /// Permanently delete the Firebase account.
